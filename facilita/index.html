@@ -7,7 +7,7 @@
   <meta name="description" content="Escolha seu iPhone, informe a entrega e finalize seu pedido com PIX.">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://connect.facebook.net; connect-src 'self' https://viacep.com.br https://www.facebook.com https://connect.facebook.net; base-uri 'self'; form-action 'self'">
   <title>Facilita iPhone | Sua análise</title>
-  <link rel="stylesheet" href="/assets/styles.css?v=7">
+  <link rel="stylesheet" href="/assets/styles.css?v=9">
 </head>
 <body>
   <div class="page-shell">
@@ -112,6 +112,7 @@
               <div class="model-list" id="modelList"></div>
             </section>
             <section class="choice-section">
+              <div class="ownership-banner">Ao completar 36x meses com seu aluguel, o aparelho será seu sem qualquer valor adicional</div>
               <h2>Armazenamento</h2>
               <p>Escolha a capacidade ideal para o seu uso.</p>
               <div class="storage-list" id="storageList"></div>
@@ -148,7 +149,10 @@
             </div>
             <div class="form-field">
               <label for="number">Número</label>
-              <input id="number" type="text" inputmode="numeric" autocomplete="address-line2" maxlength="12" required>
+              <div class="number-field-row">
+                <input id="number" type="text" inputmode="numeric" autocomplete="address-line2" maxlength="12" required>
+                <button class="no-number-button" id="noNumberButton" type="button" aria-pressed="false">S/N</button>
+              </div>
             </div>
             <div class="form-field">
               <label for="complement">Complemento</label>
@@ -259,6 +263,6 @@
 
   <script src="/assets/qrcode.js"></script>
   <script src="/assets/tracking.js"></script>
-  <script src="/assets/app.js?v=6"></script>
+  <script src="/assets/app.js?v=8"></script>
 </body>
 </html>

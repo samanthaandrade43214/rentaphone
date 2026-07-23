@@ -209,7 +209,7 @@
       </article>
       <article class="data-panel">
         <h2>Mensalidade base</h2>
-        <p>${currency.format(monthlyPrice())} por mês</p>
+        <p>${currency.format(monthlyPrice())} por mês durante 36x meses para contemplar o aparelho. <strong>(Sem fidelidade).</strong></p>
       </article>
     `;
 
@@ -323,6 +323,18 @@
   function updateShipping() {
     const complete = ["cep", "street", "number", "neighborhood", "city", "state"].every((key) => state.delivery[key]);
     document.getElementById("shippingResult").classList.toggle("visible", complete);
+  }
+
+  function setNoNumberState(active) {
+    const input = document.getElementById("number");
+    const button = document.getElementById("noNumberButton");
+    input.disabled = active;
+    input.value = active ? "S/N" : "";
+    button.setAttribute("aria-pressed", String(active));
+    button.setAttribute("aria-label", active ? "Desmarcar endereço sem número" : "Marcar endereço sem número");
+    syncDelivery();
+    updateShipping();
+    if (!active) input.focus();
   }
 
   function randomOrderCode() {
@@ -610,6 +622,10 @@
     if (onlyDigits(event.target.value).length === 8) fetchCep();
   });
   document.getElementById("cep").addEventListener("blur", fetchCep);
+  document.getElementById("noNumberButton").addEventListener("click", () => {
+    const active = document.getElementById("noNumberButton").getAttribute("aria-pressed") !== "true";
+    setNoNumberState(active);
+  });
   ["street", "number", "complement", "neighborhood", "city", "state"].forEach((id) => {
     document.getElementById(id).addEventListener("input", () => {
       if (id === "state") document.getElementById(id).value = document.getElementById(id).value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2);
@@ -676,6 +692,14 @@
     const input = document.getElementById(key);
     if (input) input.value = value;
   });
+  if (state.delivery.number.toUpperCase() === "S/N") {
+    const numberInput = document.getElementById("number");
+    numberInput.disabled = true;
+    document.getElementById("noNumberButton").setAttribute("aria-pressed", "true");
+    document.getElementById("noNumberButton").setAttribute("aria-label", "Desmarcar endereço sem número");
+  } else {
+    document.getElementById("noNumberButton").setAttribute("aria-label", "Marcar endereço sem número");
+  }
   document.getElementById("email").value = state.contact.email;
   document.getElementById("phone").value = state.contact.phone;
   updateShipping();

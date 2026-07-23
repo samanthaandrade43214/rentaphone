@@ -203,6 +203,45 @@ a:focus-visible {
   outline: 0;
 }
 .form-field input[readonly] { background: #f4f1f6; color: #5e5764; }
+.form-field input:disabled {
+  background: #f4f1f6;
+  color: #5e5764;
+  opacity: 1;
+}
+
+.number-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 86px;
+  gap: 10px;
+}
+
+.no-number-button {
+  height: 54px;
+  border: 1px solid rgba(109, 40, 217, .28);
+  border-radius: 13px;
+  background: var(--purple-50);
+  color: var(--purple-800);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 850;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+.no-number-button:hover {
+  border-color: var(--purple-500);
+}
+
+.no-number-button:focus-visible {
+  outline: 3px solid rgba(139, 92, 246, .24);
+  outline-offset: 2px;
+}
+
+.no-number-button[aria-pressed="true"] {
+  border-color: var(--purple-700);
+  background: var(--purple-700);
+  box-shadow: 0 8px 18px rgba(109, 40, 217, .22);
+  color: #fff;
+}
 
 .field-grid {
   display: grid;
@@ -596,6 +635,19 @@ a:focus-visible {
 }
 .choice-section > p { margin: 0 0 16px; color: var(--muted); font-size: 13px; }
 
+.ownership-banner {
+  margin: 0 0 22px;
+  padding: 17px 16px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--purple-900), var(--purple-600));
+  box-shadow: 0 12px 26px rgba(80, 28, 132, .22);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.45;
+  text-align: center;
+}
+
 .model-list,
 .storage-list,
 .plan-list {
@@ -894,6 +946,28 @@ a:focus-visible {
 .terms-paper p,
 .terms-paper li { color: #262027; font-size: 15px; line-height: 1.65; }
 .terms-paper ul { padding-left: 24px; }
+.terms-highlight-clause {
+  padding: 22px;
+  border: 2px solid var(--purple-600);
+  border-radius: 18px;
+  background: linear-gradient(145deg, #f7f0ff, #efe1ff);
+  box-shadow: 0 12px 28px rgba(80, 28, 132, .12);
+}
+.terms-highlight-clause > span {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--purple-800);
+  color: #fff;
+  font-family: Inter, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.terms-highlight-clause h2 { color: var(--purple-900); }
+.terms-highlight-clause p:last-child { margin-bottom: 0; }
 
 .success-page {
   display: grid;
@@ -1247,6 +1321,10 @@ body {
 .terms-paper {
   padding: 24px 18px;
   border-radius: 18px;
+}
+
+.terms-highlight-clause {
+  padding: 18px 15px;
 }
 
 .success-page {
