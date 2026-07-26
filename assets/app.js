@@ -461,6 +461,13 @@
         }
       });
     }
+    if (window.trackTaboolaEvent) {
+      window.trackTaboolaEvent("start_checkout", {
+        revenue: Number((payload.payment_amount / 100).toFixed(2)),
+        currency: "BRL",
+        orderid: orderCode
+      });
+    }
     try {
       let data;
       if (["localhost", "127.0.0.1"].includes(location.hostname) || location.protocol === "file:") {
@@ -551,23 +558,33 @@
           clearInterval(paymentPoll);
           document.getElementById("paymentStatus").textContent = "Pagamento confirmado. Preparando seu pedido.";
           const purchaseMarker = `facilitaPurchase:${identifier}`;
-          if (window.trackMetaEvent && sessionStorage.getItem(purchaseMarker) !== "true") {
+          if (sessionStorage.getItem(purchaseMarker) !== "true") {
             const payload = paymentData.request_payload || {};
             const item = payload.items?.[0] || {};
-            window.trackMetaEvent("Purchase", {
-              currency: "BRL",
-              value: Number((Number(paymentData.payment_amount || payload.payment_amount || 0) / 100).toFixed(2)),
-              content_ids: item.code ? [item.code] : [],
-              content_name: item.name || `${currentModel().name} ${currentStorage().name}`,
-              content_type: "product",
-              num_items: 1
-            }, {
-              userData: {
-                email: state.contact.email,
-                phone: state.contact.phone,
-                external_id: state.lead.cpf
-              }
-            });
+            const purchaseValue = Number((Number(paymentData.payment_amount || payload.payment_amount || 0) / 100).toFixed(2));
+            if (window.trackMetaEvent) {
+              window.trackMetaEvent("Purchase", {
+                currency: "BRL",
+                value: purchaseValue,
+                content_ids: item.code ? [item.code] : [],
+                content_name: item.name || `${currentModel().name} ${currentStorage().name}`,
+                content_type: "product",
+                num_items: 1
+              }, {
+                userData: {
+                  email: state.contact.email,
+                  phone: state.contact.phone,
+                  external_id: state.lead.cpf
+                }
+              });
+            }
+            if (window.trackTaboolaEvent) {
+              window.trackTaboolaEvent("make_purchase", {
+                revenue: purchaseValue,
+                currency: "BRL",
+                orderid: paymentData.order_code || identifier
+              });
+            }
             sessionStorage.setItem(purchaseMarker, "true");
           }
           sessionStorage.setItem("facilitaPaid", "true");

@@ -1,5 +1,6 @@
 (() => {
   const PIXEL_ID = "1011678908165044";
+  const TABOOLA_ID = 2081268;
   const isPreview = ["localhost", "127.0.0.1", ""].includes(location.hostname) || location.protocol === "file:";
 
   function eventId(name) {
@@ -46,6 +47,21 @@
     return id;
   };
 
+  window.trackTaboolaEvent = function trackTaboolaEvent(name, eventData = {}) {
+    const event = {
+      notify: "event",
+      name,
+      id: TABOOLA_ID,
+      ...eventData
+    };
+    if (isPreview) {
+      console.info("[Taboola preview]", event);
+      return;
+    }
+    window._tfa = window._tfa || [];
+    window._tfa.push(event);
+  };
+
   if (!isPreview) {
     window.fbq = window.fbq || function fbq() {
       window.fbq.callMethod ? window.fbq.callMethod.apply(window.fbq, arguments) : window.fbq.queue.push(arguments);
@@ -60,7 +76,15 @@
     script.src = "https://connect.facebook.net/pt_BR/fbevents.js";
     document.head.appendChild(script);
     window.fbq("init", PIXEL_ID);
+
+    window._tfa = window._tfa || [];
+    const taboolaScript = document.createElement("script");
+    taboolaScript.async = true;
+    taboolaScript.src = `https://cdn.taboola.com/libtrc/unip/${TABOOLA_ID}/tfa.js`;
+    taboolaScript.id = "tb_tfa_script";
+    document.head.appendChild(taboolaScript);
   }
 
   window.trackMetaEvent("PageView");
+  window.trackTaboolaEvent("page_view");
 })();
