@@ -1,4 +1,4 @@
-const PIXEL_ID = "1011678908165044";
+const PIXEL_ID = "2163835031230117";
 const ALLOWED_EVENTS = new Set(["PageView", "InitiateCheckout", "Purchase"]);
 
 function json(data, status = 200) {

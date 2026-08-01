@@ -62,6 +62,4 @@ Depois do primeiro deploy, substitua `https://seu-dominio.com` em `MANGOFY_POSTB
 
 ## Meta Pixel
 
-O Pixel `1011678908165044` envia `PageView`, `InitiateCheckout` e `Purchase`. Os mesmos eventos são enviados pela API de Conversões com deduplicação por `event_id`. O token deve existir apenas na variável protegida `META_CONVERSIONS_API_TOKEN`.
-
-O Pixel Taboola `2081268` envia `page_view` em cada carregamento, `start_checkout` ao solicitar a geração do PIX e `make_purchase` somente após a MangoFy confirmar o pagamento. O evento de compra inclui valor, moeda e código do pedido, com proteção contra disparo duplicado na mesma sessão.
+O Pixel `2163835031230117` envia `PageView`, `InitiateCheckout` e `Purchase`. Os mesmos eventos são enviados pela API de Conversões com deduplicação por `event_id`. O token deve existir apenas na variável protegida `META_CONVERSIONS_API_TOKEN`.

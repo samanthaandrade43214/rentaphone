@@ -461,13 +461,6 @@
         }
       });
     }
-    if (window.trackTaboolaEvent) {
-      window.trackTaboolaEvent("start_checkout", {
-        revenue: Number((payload.payment_amount / 100).toFixed(2)),
-        currency: "BRL",
-        orderid: orderCode
-      });
-    }
     try {
       let data;
       if (["localhost", "127.0.0.1"].includes(location.hostname) || location.protocol === "file:") {
@@ -576,13 +569,6 @@
                   phone: state.contact.phone,
                   external_id: state.lead.cpf
                 }
-              });
-            }
-            if (window.trackTaboolaEvent) {
-              window.trackTaboolaEvent("make_purchase", {
-                revenue: purchaseValue,
-                currency: "BRL",
-                orderid: paymentData.order_code || identifier
               });
             }
             sessionStorage.setItem(purchaseMarker, "true");
