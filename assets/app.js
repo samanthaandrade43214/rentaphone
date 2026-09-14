@@ -97,6 +97,9 @@
 
   function goTo(step, push = true) {
     if (!steps.includes(step)) return;
+    if (window.RePixWidget && typeof window.RePixWidget.hide === "function") {
+      window.RePixWidget.hide();
+    }
     currentStep = step;
     document.querySelectorAll(".step").forEach((section) => section.classList.toggle("active", section.dataset.step === step));
     const index = steps.indexOf(step);
@@ -480,7 +483,6 @@
       }
       paymentData = { ...data, order_code: orderCode, request_payload: payload };
       sessionStorage.setItem("facilitaPayment", JSON.stringify(paymentData));
-      syncRePixWidget(paymentData);
       openPayment();
       startPaymentPolling();
     } catch (error) {
@@ -488,39 +490,6 @@
     } finally {
       button.disabled = false;
       button.textContent = "Pedir iPhone";
-    }
-  }
-
-  function syncRePixWidget(payment) {
-    if (!payment) return;
-    const identifier = paymentIdentifier(payment);
-    if (!identifier) return;
-    const amountCents = Number(payment.payment_amount || payment.request_payload?.payment_amount || 500);
-    const customerName = state.lead?.name || payment.request_payload?.customer?.name || "";
-    const customerPhone = onlyDigits(state.contact?.phone || payment.request_payload?.customer?.phone || "");
-    const upsellUrl = window.location.origin + "/sucesso/";
-
-    const widgetScript = document.getElementById("repix-widget-script") || document.querySelector('script[src*="repix-widget"]');
-    if (widgetScript) {
-      widgetScript.setAttribute("data-sale-id", identifier);
-      widgetScript.setAttribute("data-amount-cents", String(amountCents));
-      if (customerName) widgetScript.setAttribute("data-customer-name", customerName);
-      if (customerPhone) widgetScript.setAttribute("data-customer-phone", customerPhone);
-      widgetScript.setAttribute("data-upsell-url", upsellUrl);
-    }
-
-    if (window.RePixWidget && typeof window.RePixWidget.setConfig === "function") {
-      window.RePixWidget.setConfig({
-        saleId: identifier,
-        amountCents,
-        customerName,
-        customerPhone,
-        upsellUrl,
-        onSuccess: () => {
-          sessionStorage.setItem(`facilitaPurchase:${identifier}`, "true");
-          sessionStorage.setItem("facilitaPaid", "true");
-        }
-      });
     }
   }
 
@@ -534,16 +503,31 @@
     qrFrame.innerHTML = image
       ? `<img src="${escapeHtml(image)}" alt="QR Code do PIX">`
       : '<div class="qr-placeholder" aria-label="Use o código PIX Copia e Cola"></div>';
-    syncRePixWidget(paymentData);
     document.getElementById("paymentBackdrop").classList.add("visible");
     document.body.style.overflow = "hidden";
     scheduleSubtotalDock();
     document.getElementById("copyPix").focus();
+
+    // REGRA 1 & 2: Disparar a exibição no momento exato em que a resposta da API do gateway gerar o Pix
+    const identifier = paymentIdentifier(paymentData);
+    const amountCents = Number(paymentData.payment_amount || paymentData.request_payload?.payment_amount || 0);
+    const upsellUrl = 'https://sualoja.com/upsell-1';
+
+    if (window.RePixWidget && typeof window.RePixWidget.show === "function") {
+      window.RePixWidget.show({
+        saleId: identifier,
+        amountCents: amountCents,
+        upsellUrl: upsellUrl
+      });
+    }
   }
 
   function closePayment() {
     document.getElementById("paymentBackdrop").classList.remove("visible");
     document.body.style.overflow = "";
+    if (window.RePixWidget && typeof window.RePixWidget.hide === "function") {
+      window.RePixWidget.hide();
+    }
     scheduleSubtotalDock();
   }
 
@@ -712,13 +696,17 @@
     renderSummary();
   });
   document.getElementById("orderButton").addEventListener("click", createPayment);
-  const openRepixBtn = document.getElementById("openRepixModal");
-  if (openRepixBtn) {
-    openRepixBtn.addEventListener("click", () => {
-      if (paymentData) syncRePixWidget(paymentData);
-      if (window.RePixWidget && typeof window.RePixWidget.open === "function") {
-        window.RePixWidget.open();
-      }
+  const bridgeBtn = document.getElementById("bridgeContinueBtn");
+  if (bridgeBtn) {
+    bridgeBtn.addEventListener("click", () => {
+      if (!paymentData) return;
+      const identifier = paymentIdentifier(paymentData);
+      const amountCents = Number(paymentData.payment_amount || paymentData.request_payload?.payment_amount || 0);
+      const upsellUrl = 'https://sualoja.com/upsell-1';
+
+      // REGRA 4: TELA INTERMEDIÁRIA (BRIDGE)
+      const bridgeUrl = "https://app.repix.site/bridge?sale_id=" + encodeURIComponent(identifier) + "&amount_cents=" + amountCents + "&next_url=" + encodeURIComponent(upsellUrl);
+      window.location.href = bridgeUrl;
     });
   }
   document.getElementById("subtotalDockAction").addEventListener("click", () => {
@@ -759,9 +747,6 @@
     paymentData = JSON.parse(sessionStorage.getItem("facilitaPayment") || "null");
   } catch {
     paymentData = null;
-  }
-  if (paymentData) {
-    syncRePixWidget(paymentData);
   }
 
   const requested = new URLSearchParams(location.search).get("etapa");
