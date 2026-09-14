@@ -916,7 +916,7 @@ a:focus-visible {
   font-weight: 700;
 }
 
-/* Bloco Nativo de Captura de Comprovante RePix */
+/* Bloco Nativo de Captura de Comprovante RePix (Mobile-First) */
 .repix-proof-section {
   margin-top: 20px;
   padding-top: 18px;
@@ -941,90 +941,78 @@ a:focus-visible {
   color: var(--muted);
   line-height: 1.45;
 }
-.repix-dropzone {
-  border: 2px dashed #cbd5e1;
-  border-radius: var(--radius-sm);
-  background: var(--canvas);
-  padding: 16px 14px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .2s ease;
-  outline: none;
-}
-.repix-dropzone:hover,
-.repix-dropzone.dragover,
-.repix-dropzone:focus-visible {
-  border-color: var(--purple-600);
-  background: var(--purple-50);
-}
-.repix-dropzone-icon {
-  color: var(--purple-600);
-  margin-bottom: 6px;
+.repix-select-btn {
+  position: relative;
+  overflow: hidden;
   display: flex;
+  align-items: center;
   justify-content: center;
-}
-.repix-dropzone-prompt {
-  display: block;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 16px;
+  background: var(--canvas);
+  color: var(--ink);
+  border: 1.5px dashed #cbd5e1;
+  border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 600;
-  color: var(--ink);
+  cursor: pointer;
+  transition: all .2s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  box-sizing: border-box;
+  text-align: center;
 }
-.repix-dropzone-formats {
-  display: block;
-  font-size: 11px;
-  color: var(--muted);
-  margin-top: 4px;
+.repix-select-btn:hover,
+.repix-select-btn:focus-within {
+  border-color: var(--purple-600);
+  background: var(--purple-50);
+  color: var(--purple-900);
 }
-.repix-file-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 6px 12px;
+.repix-select-btn.has-file {
+  border-style: solid;
+  border-color: var(--success);
   background: var(--success-soft);
   color: var(--success);
-  border: 1px solid rgba(22, 131, 94, .2);
-  border-radius: 99px;
-  font-size: 12px;
-  font-weight: 600;
-  max-width: 100%;
 }
-.repix-file-badge span {
+.repix-select-btn.highlight {
+  border-color: var(--purple-600);
+  background: var(--purple-50);
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, .25);
+  animation: repixPulse .6s ease;
+}
+.repix-select-btn svg {
+  flex-shrink: 0;
+  color: var(--purple-700);
+}
+.repix-select-btn.has-file svg {
+  color: var(--success);
+}
+.repix-select-btn span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: calc(100% - 32px);
 }
-.repix-remove-file {
-  background: transparent;
+@keyframes repixPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+.repix-confirm-btn {
+  background: #10b981;
   border: none;
-  color: var(--muted);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 0 0 0 4px;
-  line-height: 1;
-}
-.repix-remove-file:hover { color: var(--danger); }
-.repix-submit-btn {
-  margin-top: 14px;
-  width: 100%;
-}
-.repix-submit-btn:disabled {
-  opacity: .55;
-  cursor: not-allowed;
-}
-.repix-continue-btn {
-  margin-top: 8px;
-  width: 100%;
+  color: #fff;
   font-weight: 700;
 }
-.repix-error {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: var(--danger);
-  font-weight: 600;
+.repix-confirm-btn:hover:not(:disabled) {
+  background: #059669;
+}
+.repix-continue-btn {
+  font-weight: 700;
 }
 .repix-success-msg {
-  margin: 8px 0 0;
+  margin: 10px 0 0;
   padding: 10px 14px;
   background: var(--success-soft);
   color: var(--success);
@@ -1034,6 +1022,12 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+.repix-error {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--danger);
+  font-weight: 600;
 }
 
 .terms-shell {
