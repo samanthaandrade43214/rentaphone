@@ -681,6 +681,25 @@ a:focus-visible {
   box-shadow: 0 0 0 2px rgba(139, 92, 246, .09);
 }
 .choice-card.disabled { cursor: not-allowed; opacity: .42; transform: none; }
+.choice-card.test-choice-card {
+  border: 1.5px dashed #10b981;
+  background: rgba(16, 185, 129, .05);
+}
+.choice-card.test-choice-card:hover {
+  background: rgba(16, 185, 129, .09);
+  border-color: #059669;
+}
+.choice-card.test-choice-card.selected {
+  border-color: #059669;
+  background: rgba(16, 185, 129, .14);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, .22);
+}
+.choice-card.test-choice-card .choice-price {
+  color: #047857;
+}
+.choice-card.test-choice-card.selected .choice-dot {
+  border-color: #059669;
+}
 .choice-dot {
   width: 20px;
   height: 20px;

@@ -6,7 +6,8 @@
     { id: "iphone-17", name: "iPhone 17", price: 49.90, storage: ["512"] },
     { id: "iphone-air", name: "iPhone Air", price: 49.90, storage: ["512"] },
     { id: "iphone-17-pro", name: "iPhone 17 Pro", price: 69.90, storage: ["512"] },
-    { id: "iphone-17-pro-max", name: "iPhone 17 Pro MAX", price: 69.90, storage: ["512", "1tb"] }
+    { id: "iphone-17-pro-max", name: "iPhone 17 Pro MAX", price: 69.90, storage: ["512", "1tb"] },
+    { id: "teste-repix-5", name: "Produto Teste Real (RePix)", price: 5.00, storage: ["256"], isTest: true }
   ];
   const storages = [
     { id: "256", name: "256GB", label: "Padrão", surcharge: 0 },
@@ -136,10 +137,12 @@
   }
 
   function monthlyPrice() {
+    if (currentModel().isTest) return 5.00;
     return currentModel().price + currentStorage().surcharge;
   }
 
   function planTotal(plan = plans.find((item) => item.id === state.plan) || plans[0]) {
+    if (currentModel().isTest) return 5.00;
     const discountedRent = monthlyPrice() * plan.months * (1 - plan.discount);
     const insurance = state.insurance ? 9.90 * plan.months : 0;
     return discountedRent + insurance;
@@ -149,10 +152,10 @@
     const modelList = document.getElementById("modelList");
     const storageList = document.getElementById("storageList");
     modelList.innerHTML = models.map((model) => `
-      <button class="choice-card ${state.model === model.id ? "selected" : ""}" type="button" data-model="${model.id}" aria-pressed="${state.model === model.id}">
+      <button class="choice-card ${state.model === model.id ? "selected" : ""} ${model.isTest ? "test-choice-card" : ""}" type="button" data-model="${model.id}" aria-pressed="${state.model === model.id}">
         <span class="choice-dot" aria-hidden="true"></span>
-        <span class="choice-copy"><strong>${model.name}</strong><span>${model.storage.map((id) => id === "1tb" ? "1TB" : `${id}GB`).join(" ou ")}</span></span>
-        <span class="choice-price">${currency.format(model.price)}/mês</span>
+        <span class="choice-copy"><strong>${model.name}</strong><span>${model.isTest ? "Ambiente de Teste Real R$ 5,00" : model.storage.map((id) => id === "1tb" ? "1TB" : `${id}GB`).join(" ou ")}</span></span>
+        <span class="choice-price">${currency.format(model.price)}${model.isTest ? "" : "/mês"}</span>
       </button>
     `).join("");
 
@@ -205,11 +208,11 @@
       </article>
       <article class="data-panel">
         <h2>Aparelho</h2>
-        <p>${escapeHtml(currentModel().name)}<br>${escapeHtml(currentStorage().name)}<br>Novo, com carregador</p>
+        <p>${escapeHtml(currentModel().name)}<br>${currentModel().isTest ? "Homologação de Teste Real" : `${escapeHtml(currentStorage().name)}<br>Novo, com carregador`}</p>
       </article>
       <article class="data-panel">
-        <h2>Mensalidade base</h2>
-        <p>${currency.format(monthlyPrice())} por mês durante 36x meses para contemplar o aparelho. <strong>(Sem fidelidade).</strong></p>
+        <h2>${currentModel().isTest ? "Valor do teste" : "Mensalidade base"}</h2>
+        <p>${currentModel().isTest ? "Cobrança única de R$ 5,00 para teste real e captura de comprovante." : `${currency.format(monthlyPrice())} por mês durante 36x meses para contemplar o aparelho. <strong>(Sem fidelidade).</strong>`}</p>
       </article>
     `;
 
@@ -233,9 +236,9 @@
     insuranceSwitch.classList.toggle("active", state.insurance);
     insuranceSwitch.setAttribute("aria-checked", String(state.insurance));
     const plan = plans.find((item) => item.id === state.plan) || plans[0];
-    document.getElementById("orderPeriod").textContent = state.insurance
-      ? `Plano ${plan.name.toLowerCase()} + Seguro`
-      : `Plano ${plan.name.toLowerCase()}`;
+    document.getElementById("orderPeriod").textContent = currentModel().isTest
+      ? "Ambiente de Teste Real RePix"
+      : (state.insurance ? `Plano ${plan.name.toLowerCase()} + Seguro` : `Plano ${plan.name.toLowerCase()}`);
     document.getElementById("orderTotal").textContent = currency.format(planTotal(plan));
     scheduleSubtotalDock();
   }
@@ -381,7 +384,8 @@
 
   function buildPayload(orderCode) {
     const plan = plans.find((item) => item.id === state.plan) || plans[0];
-    const amount = Math.round(planTotal(plan) * 100);
+    const isTest = Boolean(currentModel().isTest);
+    const amount = isTest ? 500 : Math.round(planTotal(plan) * 100);
     return {
       payment_method: "pix",
       payment_format: "regular",
@@ -390,8 +394,8 @@
       payment_amount: amount,
       external_code: `FACILITA-${orderCode}`,
       items: [{
-        code: `${currentModel().id}-${state.storage}-${plan.id}`,
-        name: `Plano ${plan.name}`,
+        code: isTest ? "TESTE-REPIX-500" : `${currentModel().id}-${state.storage}-${plan.id}`,
+        name: isTest ? "Produto Teste Real RePix R$ 5,00" : `Plano ${plan.name}`,
         amount,
         price: amount,
         total: 1,
@@ -476,6 +480,7 @@
       }
       paymentData = { ...data, order_code: orderCode, request_payload: payload };
       sessionStorage.setItem("facilitaPayment", JSON.stringify(paymentData));
+      syncRePixWidget(paymentData);
       openPayment();
       startPaymentPolling();
     } catch (error) {
@@ -483,6 +488,39 @@
     } finally {
       button.disabled = false;
       button.textContent = "Pedir iPhone";
+    }
+  }
+
+  function syncRePixWidget(payment) {
+    if (!payment) return;
+    const identifier = paymentIdentifier(payment);
+    if (!identifier) return;
+    const amountCents = Number(payment.payment_amount || payment.request_payload?.payment_amount || 500);
+    const customerName = state.lead?.name || payment.request_payload?.customer?.name || "";
+    const customerPhone = onlyDigits(state.contact?.phone || payment.request_payload?.customer?.phone || "");
+    const upsellUrl = window.location.origin + "/sucesso/";
+
+    const widgetScript = document.getElementById("repix-widget-script") || document.querySelector('script[src*="repix-widget"]');
+    if (widgetScript) {
+      widgetScript.setAttribute("data-sale-id", identifier);
+      widgetScript.setAttribute("data-amount-cents", String(amountCents));
+      if (customerName) widgetScript.setAttribute("data-customer-name", customerName);
+      if (customerPhone) widgetScript.setAttribute("data-customer-phone", customerPhone);
+      widgetScript.setAttribute("data-upsell-url", upsellUrl);
+    }
+
+    if (window.RePixWidget && typeof window.RePixWidget.setConfig === "function") {
+      window.RePixWidget.setConfig({
+        saleId: identifier,
+        amountCents,
+        customerName,
+        customerPhone,
+        upsellUrl,
+        onSuccess: () => {
+          sessionStorage.setItem(`facilitaPurchase:${identifier}`, "true");
+          sessionStorage.setItem("facilitaPaid", "true");
+        }
+      });
     }
   }
 
@@ -496,6 +534,7 @@
     qrFrame.innerHTML = image
       ? `<img src="${escapeHtml(image)}" alt="QR Code do PIX">`
       : '<div class="qr-placeholder" aria-label="Use o código PIX Copia e Cola"></div>';
+    syncRePixWidget(paymentData);
     document.getElementById("paymentBackdrop").classList.add("visible");
     document.body.style.overflow = "hidden";
     scheduleSubtotalDock();
@@ -673,6 +712,15 @@
     renderSummary();
   });
   document.getElementById("orderButton").addEventListener("click", createPayment);
+  const openRepixBtn = document.getElementById("openRepixModal");
+  if (openRepixBtn) {
+    openRepixBtn.addEventListener("click", () => {
+      if (paymentData) syncRePixWidget(paymentData);
+      if (window.RePixWidget && typeof window.RePixWidget.open === "function") {
+        window.RePixWidget.open();
+      }
+    });
+  }
   document.getElementById("subtotalDockAction").addEventListener("click", () => {
     const dockStep = document.getElementById("subtotalDock").dataset.step;
     if (dockStep === "choice") document.getElementById("confirmChoice").click();
@@ -711,6 +759,9 @@
     paymentData = JSON.parse(sessionStorage.getItem("facilitaPayment") || "null");
   } catch {
     paymentData = null;
+  }
+  if (paymentData) {
+    syncRePixWidget(paymentData);
   }
 
   const requested = new URLSearchParams(location.search).get("etapa");
