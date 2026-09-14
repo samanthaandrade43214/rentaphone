@@ -1,0 +1,1806 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="h-full dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Divergências & Recuperação Pix | RePix</title>
+    <meta name="description" content="Seleção e exportação em lote de comprovantes Pix com nomenclatura oficial para contestação e recuperação via WhatsApp.">
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+    <link rel="alternate icon" type="image/png" href="assets/images/favicon.svg">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        repix: {
+                            blue: '#0066FF',
+                            blueDark: '#0052CC',
+                            slateDark: '#1E293B',
+                            slateDarker: '#0F172A',
+                            bg: '#F8FAFC',
+                            amber: '#F59E0B',
+                            emerald: '#10B981'
+                        }
+                    },
+                    fontFamily: {
+                        heading: ['Outfit', 'sans-serif'],
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Custom CSS & Config -->
+    <link rel="stylesheet" href="assets/css/styles.css">
+    <style>
+        /* Disable spin buttons / setas dos campos de digitar numero */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none !important;
+            margin: 0 !important;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield !important;
+            appearance: textfield !important;
+        }
+    </style>
+    <script src="assets/js/config.js?v=1.2.3"></script>
+    <script src="assets/js/disputes.js?v=1.2.3"></script>
+</head>
+<body class="min-h-full flex bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 transition-colors duration-200" x-data="disputesApp()">
+
+    <!-- OVERLAY ESCURO PARA MOBILE SIDEBAR -->
+    <div x-show="sidebarOpen" 
+         x-transition:enter="transition-opacity ease-linear duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition-opacity ease-linear duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @click="sidebarOpen = false" 
+         class="fixed inset-0 bg-slate-900/70 z-40 lg:hidden" 
+         style="display: none;"></div>
+
+    <!-- MENU LATERAL RETRÁTIL (SIDEBAR) -->
+    <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transform transition-transform duration-300 ease-in-out lg:translate-x-0"
+           :class="sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'">
+        
+        <!-- Topo da Sidebar: Logo & Perfil -->
+        <div>
+            <div class="h-16 flex items-center justify-between px-5 border-b border-slate-200 dark:border-slate-800">
+                <a href="/dashboard" class="flex items-center">
+                    <img src="assets/images/logo.svg" alt="RePix" class="h-8 w-auto">
+                </a>
+                <button @click="sidebarOpen = false" class="lg:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Identificação do Lojista + Botão Alterar Senha -->
+                <div class="p-3 mx-3 my-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-400 tracking-wider">Conta Ativa</span>
+                        <button type="button" @click="openPasswordModal()" class="text-[10px] font-bold text-repix-blue dark:text-blue-400 hover:underline flex items-center gap-0.5 cursor-pointer" title="Alterar minha senha">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                            <span>Alterar Senha</span>
+                        </button>
+                    </div>
+                    <span class="text-xs font-bold text-slate-900 dark:text-white truncate block mt-0.5" x-text="currentUser?.name || 'Loja Matriz RePix'"></span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400 font-mono truncate block" x-text="currentUser?.email || 'loja1@repix.com.br'"></span>
+                </div>
+
+            <!-- Navegação -->
+            <nav class="px-3 space-y-1">
+                <a href="/dashboard" class="flex items-center gap-3 px-3 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                    </svg>
+                    Painel Geral
+                </a>
+
+                <a href="/disputes" class="flex items-center gap-3 px-3 py-2 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60">
+                    <svg class="w-4 h-4 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <span>Divergências & Recuperação</span>
+                </a>
+
+                <!-- Botão Recarga de Saldo -->
+                <button @click="openRechargeModal()" class="w-full flex items-center justify-between px-3 py-2 text-xs font-bold rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition cursor-pointer">
+                    <span class="flex items-center gap-3">
+                        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span>Recarga RePix</span>
+                    </span>
+                    <span class="px-1.5 py-0.5 rounded text-[10px] font-black bg-emerald-600 text-white" x-text="Math.floor((balanceCents || 0) / 200) + ' RePix'"></span>
+                </button>
+
+                <button @click.stop="openIntegrationModal('ai_prompt')" class="group w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer relative">
+                    <span class="flex items-center gap-2.5 min-w-0">
+                        <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                        </svg>
+                        <span class="whitespace-nowrap font-semibold text-emerald-600 dark:text-emerald-400">Integração Checkout & IA</span>
+                    </span>
+                    <template x-if="!isPixConfigured">
+                        <span class="inline-flex items-center px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-bold shadow-xs pointer-events-none shrink-0" title="Configuração pendente">
+                            <span>Pendente</span>
+                        </span>
+                    </template>
+                </button>
+
+                <button @click.stop="openIntegrationModal('webhook')" class="group w-full flex items-center justify-between px-3 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer relative">
+                    <span class="flex items-center gap-2.5 min-w-0">
+                        <svg class="w-4 h-4 text-repix-blue shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        <span class="whitespace-nowrap">Integração MangoFy</span>
+                    </span>
+                    <template x-if="!isMangofyConfigured">
+                        <span class="inline-flex items-center px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-bold shadow-xs pointer-events-none shrink-0" title="Configuração pendente">
+                            <span>Pendente</span>
+                        </span>
+                    </template>
+                </button>
+
+                <!-- Módulo Automação WhatsApp (Habilitado) -->
+                <button @click="openWhatsAppModal()" class="w-full flex items-center justify-between px-2.5 py-2 text-xs font-medium rounded-lg text-slate-700 dark:text-slate-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 transition cursor-pointer group">
+                    <span class="flex items-center gap-2 min-w-0">
+                        <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.073-2.072-.497-1.761-.728-2.884-2.518-2.971-2.635-.088-.117-.714-.95-.714-1.814 0-.865.452-1.29.613-1.464.16-.175.352-.218.47-.218.118 0 .235.002.338.007.108.006.252-.041.393.3.145.349.497 1.21.541 1.298.043.088.073.19.014.305-.058.117-.087.19-.175.292-.088.103-.185.229-.264.307-.088.088-.18.183-.078.358.103.175.457.754.981 1.221.675.601 1.244.787 1.42.875.175.088.277.073.38-.044.103-.117.439-.511.556-.687.117-.175.234-.146.394-.088.16.059 1.018.48 1.194.568.175.088.293.131.336.205.044.073.044.423-.1.828z"/>
+                        </svg>
+                        <span class="whitespace-nowrap tracking-tight">Automação WhatsApp</span>
+                    </span>
+                    <span class="shrink-0 px-1.5 py-0.5 text-[8.5px] font-bold rounded-full bg-emerald-500/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-400/20 whitespace-nowrap leading-none">Configurar</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Rodapé da Sidebar -->
+        <div class="p-3 border-t border-slate-200 dark:border-slate-800 space-y-2">
+            <button @click="toggleTheme()" class="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                <span class="flex items-center gap-2">
+                    <template x-if="!isDarkTheme">
+                        <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>
+                    </template>
+                    <template x-if="isDarkTheme">
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                    </template>
+                    <span x-text="isDarkTheme ? 'Modo Escuro' : 'Modo Claro'"></span>
+                </span>
+                <span class="text-[10px] text-slate-400 uppercase font-bold tracking-wider" x-text="isDarkTheme ? 'Dark' : 'Light'"></span>
+            </button>
+
+            <button @click="logout()" class="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                </svg>
+                Sair da Conta
+            </button>
+        </div>
+    </aside>
+
+    <!-- ÁREA PRINCIPAL -->
+    <div class="flex-1 flex flex-col min-w-0 lg:pl-64 overflow-hidden">
+        
+        <!-- HEADER SUPERIOR -->
+        <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-30 h-16 flex items-center justify-between px-4 sm:px-6">
+            <div class="flex items-center gap-3">
+                <button @click="sidebarOpen = true" class="lg:hidden p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <div class="lg:hidden">
+                    <img src="assets/images/logo.svg" alt="RePix" class="h-7 w-auto">
+                </div>
+                <div class="hidden sm:block">
+                    <span class="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">Módulo de Divergências & Recuperação</span>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Badge de Saldo Atual com Ação de Recarga -->
+                <div @click="openRechargeModal()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-xs font-medium cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition shadow-2xs" title="Clique para recarregar moedas RePix">
+                    <svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Saldo: <strong class="font-bold text-slate-900 dark:text-white" x-text="Math.floor((balanceCents || 0) / 200) + ' RePix'">0 RePix</strong></span>
+                    <span class="hidden md:inline-block px-1.5 py-0.5 rounded text-[10px] bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 font-black tracking-wider hover:opacity-90 transition">+ RECARGA</span>
+                </div>
+
+                <!-- Botão Integração MangoFy (Abre Modal na Aba Webhook) -->
+                <button @click.stop="openIntegrationModal('webhook')" class="group hidden md:flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-repix-blue dark:text-blue-400 text-xs font-bold rounded-lg border border-blue-200 dark:border-blue-800/60 transition cursor-pointer relative">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                    </svg>
+                    <span>Integração MangoFy</span>
+                    <template x-if="!isMangofyConfigured">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider shadow-xs pointer-events-none" title="Pendente">
+                            <span>Pendente</span>
+                        </span>
+                    </template>
+                </button>
+
+                <!-- Botão + Integração Checkout (Abre Modal na Aba AI Prompt) -->
+                <button @click.stop="openIntegrationModal('ai_prompt')" class="group hidden md:flex items-center gap-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-lg shadow-xs transition cursor-pointer relative">
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <span>🤖 Integrar Checkout (IA)</span>
+                    <template x-if="!isPixConfigured">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold uppercase tracking-wider shadow-xs pointer-events-none" title="Pendente">
+                            <span>Pendente</span>
+                        </span>
+                    </template>
+                </button>
+
+                <!-- Seletor Rápido Dark Mode no Topo -->
+                <button @click="toggleTheme()" class="h-8 w-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/90 text-slate-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700/60 shadow-xs transition cursor-pointer" title="Alternar Modo Noturno">
+                    <template x-if="!isDarkTheme">
+                        <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </template>
+                    <template x-if="isDarkTheme">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                        </svg>
+                    </template>
+                </button>
+
+                <!-- Sino de Notificações (Todo para a Direita) -->
+                <div class="relative ml-1" x-data="{ notifDropdownOpen: false }">
+                    <button @click="notifDropdownOpen = !notifDropdownOpen; if (notifDropdownOpen) markNotificationsRead()"
+                            class="h-8 w-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700/90 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60 shadow-xs transition cursor-pointer relative"
+                            title="Notificações de Divergências e Recuperações">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <template x-if="unreadNotificationsCount > 0">
+                            <span class="absolute -top-1 -right-1 flex h-4 w-4">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-white text-[9px] font-black items-center justify-center" x-text="unreadNotificationsCount"></span>
+                            </span>
+                        </template>
+                    </button>
+
+                    <!-- Dropdown de Notificações -->
+                    <div x-show="notifDropdownOpen" @click.away="notifDropdownOpen = false" 
+                         class="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 text-xs overflow-hidden"
+                         style="display: none;">
+                        <div class="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/50">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-repix-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                                <span class="font-bold text-slate-900 dark:text-white">Central de Notificações</span>
+                            </div>
+                            <button @click="markNotificationsRead()" class="text-[10px] text-slate-500 hover:text-repix-blue dark:text-slate-400 font-semibold cursor-pointer">
+                                Marcar lidas
+                            </button>
+                        </div>
+                        <div class="max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+                            <template x-if="notifications.length === 0">
+                                <div class="py-8 text-center text-slate-400 text-xs">
+                                    Nenhuma notificação no momento.
+                                </div>
+                            </template>
+                            <template x-for="n in notifications" :key="n.id">
+                                <div class="p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition flex items-start gap-2.5" :class="!n.read ? 'bg-blue-50/20 dark:bg-blue-950/20' : ''">
+                                    <span class="w-2 h-2 rounded-full mt-1.5 shrink-0" :class="n.type === 'recovered' ? 'bg-blue-500' : 'bg-red-500'"></span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center justify-between gap-1">
+                                            <strong class="text-xs" :class="n.type === 'recovered' ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'" x-text="n.title"></strong>
+                                            <span class="text-[10px] text-slate-400 font-mono" x-text="REPIX_CONFIG.formatTime(n.created_at)"></span>
+                                        </div>
+                                        <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5" x-text="n.message"></p>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTEÚDO SCROLLÁVEL -->
+        <main class="flex-1 p-3 sm:p-6 lg:p-8 space-y-6 max-w-full overflow-x-hidden">
+            
+            <!-- CABEÇALHO DO MÓDULO -->
+            <div class="bg-white dark:bg-slate-900 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <h1 class="text-base sm:text-xl font-bold text-slate-900 dark:text-white font-heading">Divergências & Recuperação</h1>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
+                        Transações onde o cliente enviou comprovante, mas o status permanece pendente no gateway. Você pode exportar o pacote <strong>.ZIP oficial ({ID_VENDA}_{DATA}_{HORA}.ext)</strong> para contestar no gateway e/ou <strong>disparar mensagens personalizadas via WhatsApp</strong> de forma manual ou automática para alinhar com o cliente.
+                    </p>
+                </div>
+
+                <button @click="loadDivergent(currentPage)" class="self-start md:self-auto px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 whitespace-nowrap">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Atualizar Lista
+                </button>
+            </div>
+
+            
+            <!-- CARDS DE RESUMO: DIVERGÊNCIAS & RECUPERADAS -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Divergências Ativas</span>
+                        <span class="text-xl sm:text-2xl font-extrabold text-red-600 dark:text-red-400" x-text="activeDivergentCount">0</span>
+                    </div>
+                    <span class="p-2.5 rounded-xl bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60 font-bold text-xs">
+                        Aguardando
+                    </span>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Vendas Recuperadas</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-xl sm:text-2xl font-extrabold text-blue-600 dark:text-blue-400" x-text="recoveredCount">0</span>
+                            <span class="text-xs font-semibold text-slate-500 font-mono" x-text="'(' + REPIX_CONFIG.formatBRL(recoveredAmountCents) + ')'"></span>
+                        </div>
+                    </div>
+                    <span class="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 font-bold text-xs">
+                        Recuperadas
+                    </span>
+                </div>
+
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Saldo Disponível</span>
+                        <span class="text-xl sm:text-2xl font-extrabold text-emerald-600 dark:text-emerald-400" x-text="Math.floor((balanceCents || 0) / 200) + ' RePix'">0 RePix</span>
+                    </div>
+                    <button @click="openRechargeModal()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs cursor-pointer">
+                        + Recarga
+                    </button>
+                </div>
+            </div>
+
+            <!-- BARRA DE AÇÕES EM LOTE -->
+            <div class="bg-slate-900 dark:bg-slate-900 text-white p-4 rounded-xl border border-slate-800 shadow-md flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" :checked="selectAll" @change="toggleSelectAll()" id="selectAllMain" class="w-4 h-4 text-repix-blue rounded border-slate-700 bg-slate-800 focus:ring-repix-blue cursor-pointer">
+                        <label for="selectAllMain" class="text-xs font-bold cursor-pointer select-none">
+                            <span x-text="selectAll ? 'Desmarcar Página' : 'Selecionar Página'"></span>
+                        </label>
+                    </div>
+
+                    <div class="h-4 w-px bg-slate-700 hidden sm:block"></div>
+
+                    <div class="text-xs text-slate-300">
+                        Marcadas: <strong class="text-white text-sm" x-text="selectedCount"></strong> de <span x-text="divergentTransactions.length"></span>
+                    </div>
+
+                    <div class="text-xs text-slate-300">
+                        Total Selecionado: <strong class="text-emerald-400 text-sm" x-text="REPIX_CONFIG.formatBRL(totalDivergentAmountCents)"></strong>
+                    </div>
+                </div>
+
+                <!-- Botão de Exportação ZIP -->
+                <button @click="exportSelectedZip()" :disabled="selectedCount === 0 || exportingZip" class="px-5 py-2.5 bg-repix-blue hover:bg-repix-blueDark text-white font-bold text-xs rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm whitespace-nowrap">
+                    <template x-if="exportingZip">
+                        <div class="flex items-center gap-2">
+                            <div class="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                            <span>Compactando Comprovantes...</span>
+                        </div>
+                    </template>
+                    <template x-if="!exportingZip">
+                        <div class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            <span>Baixar Comprovantes Marcados (.ZIP)</span>
+                        </div>
+                    </template>
+                </button>
+            </div>
+
+            <!-- TABELA DE DIVERGÊNCIAS COM FILTROS AVANÇADOS -->
+            <div class="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs p-4 sm:p-5 space-y-4">
+                
+                <!-- BARRA DE FILTROS & ORDENAÇÃO -->
+                <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 dark:text-white font-heading">Transações sob Divergência</h2>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Total de <span class="font-bold text-slate-900 dark:text-white" x-text="totalItems"></span> vendas divergentes</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Busca -->
+                        <div class="relative flex-1 sm:flex-none">
+                            <input type="text" x-model="searchQuery" @keyup.enter="loadDivergent(1)" placeholder="Buscar código, telefone..." class="w-full sm:w-44 pl-8 pr-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white focus:outline-none focus:border-repix-blue">
+                            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+
+                        <!-- Seletor de Período com Popover e Calendário Único (Idêntico ao Painel Geral) -->
+                        <div class="relative" @click.outside="closeDatepicker()">
+                            <!-- Botão Gatilho do Dropdown -->
+                            <button @click="toggleDatepicker()" 
+                                    class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:border-repix-blue dark:hover:border-repix-blue hover:shadow-xs transition cursor-pointer">
+                                <svg class="w-3.5 h-3.5 text-repix-blue shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <span x-text="getFormattedPeriodLabel()" class="truncate max-w-[150px] sm:max-w-none">Todas as datas</span>
+                                <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200" :class="isDatepickerOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+
+                            <!-- Popover Modal Flutuante (Presets à Esquerda + 1 Único Calendário à Direita) -->
+                            <div x-show="isDatepickerOpen" 
+                                 x-cloak
+                                 x-transition:enter="transition ease-out duration-150"
+                                 x-transition:enter-start="opacity-0 translate-y-2 scale-98"
+                                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
+                                 x-transition:leave="transition ease-in duration-100"
+                                 x-transition:leave-start="opacity-100 translate-y-0 scale-100"
+                                 x-transition:leave-end="opacity-0 translate-y-2 scale-98"
+                                 class="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 z-50 flex flex-col sm:flex-row bg-[#111827] text-slate-200 rounded-2xl shadow-2xl border border-slate-700/90 overflow-hidden w-[310px] sm:w-[480px]">
+                                
+                                <!-- Coluna 1: Lista de Presets -->
+                                <div class="w-full sm:w-[150px] bg-[#0b0f19] sm:border-r border-b sm:border-b-0 border-slate-800 p-2 flex flex-col gap-1 shrink-0">
+                                    <button type="button" @click="selectPreset('all')"
+                                            :class="selectedPreset === 'all' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Todas as datas
+                                    </button>
+                                    <button type="button" @click="selectPreset('today')"
+                                            :class="selectedPreset === 'today' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Hoje
+                                    </button>
+                                    <button type="button" @click="selectPreset('yesterday')"
+                                            :class="selectedPreset === 'yesterday' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Ontem
+                                    </button>
+                                    <button type="button" @click="selectPreset('7days')"
+                                            :class="selectedPreset === '7days' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Últimos 7 dias
+                                    </button>
+                                    <button type="button" @click="selectPreset('30days')"
+                                            :class="selectedPreset === '30days' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Últimos 30 dias
+                                    </button>
+                                    <button type="button" @click="selectPreset('this_month')"
+                                            :class="selectedPreset === 'this_month' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Este mês
+                                    </button>
+                                    <button type="button" @click="selectPreset('last_month')"
+                                            :class="selectedPreset === 'last_month' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Mês passado
+                                    </button>
+                                    <button type="button" @click="selectedPreset = 'custom'"
+                                            :class="selectedPreset === 'custom' ? 'bg-[#FF4D00] text-white font-bold shadow-xs' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/60'"
+                                            class="w-full text-left px-3 py-2 text-xs rounded-lg transition">
+                                        Personalizado
+                                    </button>
+                                </div>
+
+                                <!-- Coluna 2: SOMENTE 1 CALENDÁRIO -->
+                                <div class="flex-1 p-3 flex flex-col justify-between">
+                                    <!-- Navegação do Mês -->
+                                    <div class="flex items-center justify-between mb-2 px-1">
+                                        <button type="button" @click="prevCalMonth()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                                            </svg>
+                                        </button>
+                                        <span class="text-xs font-bold text-slate-100 capitalize" x-text="getCalendarMonthName()"></span>
+                                        <button type="button" @click="nextCalMonth()" class="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <!-- Dias da Semana -->
+                                    <div class="grid grid-cols-7 gap-1 text-center mb-1">
+                                        <template x-for="wDay in ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']" :key="wDay">
+                                            <span class="text-[10px] font-semibold text-slate-500" x-text="wDay"></span>
+                                        </template>
+                                    </div>
+
+                                    <!-- Grade de Dias do Calendário -->
+                                    <div class="grid grid-cols-7 gap-1 text-center">
+                                        <template x-for="day in getCalendarDays()" :key="day.dateStr">
+                                            <button type="button"
+                                                    @click="selectCalendarDay(day.dateStr)"
+                                                    @mouseenter="onDayHover(day.dateStr)"
+                                                    :disabled="!day.isCurrentMonth"
+                                                    :class="{
+                                                        'opacity-25 cursor-not-allowed': !day.isCurrentMonth,
+                                                        'bg-[#2563EB] text-white font-bold shadow-xs': isDateSelectedStart(day.dateStr) || isDateSelectedEnd(day.dateStr),
+                                                        'bg-[#1e3a8a]/60 text-blue-200': isDateInRange(day.dateStr) && !isDateSelectedStart(day.dateStr) && !isDateSelectedEnd(day.dateStr),
+                                                        'text-slate-200 hover:bg-slate-800': day.isCurrentMonth && !isDateSelectedStart(day.dateStr) && !isDateSelectedEnd(day.dateStr) && !isDateInRange(day.dateStr),
+                                                        'ring-1 ring-repix-blue ring-inset': day.isToday && !isDateSelectedStart(day.dateStr) && !isDateSelectedEnd(day.dateStr)
+                                                    }"
+                                                    class="h-7 w-7 sm:h-8 sm:w-8 mx-auto flex items-center justify-center text-xs rounded-lg transition relative cursor-pointer">
+                                                <span x-text="day.dayNum"></span>
+                                            </button>
+                                        </template>
+                                    </div>
+
+                                    <!-- Rodapé com Intervalo e Ações -->
+                                    <div class="mt-3 pt-2.5 border-t border-slate-800 flex items-center justify-between gap-2">
+                                        <div class="text-[11px] text-slate-400 truncate">
+                                            <template x-if="tempStartDate">
+                                                <span>
+                                                    <span x-text="formatDateBR(tempStartDate)"></span>
+                                                    <template x-if="tempEndDate && tempEndDate !== tempStartDate">
+                                                        <span> - <span x-text="formatDateBR(tempEndDate)"></span></span>
+                                                    </template>
+                                                </span>
+                                            </template>
+                                            <template x-if="!tempStartDate">
+                                                <span>Todas as datas</span>
+                                            </template>
+                                        </div>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <button type="button" @click="cancelPicker()" class="px-2.5 py-1 text-xs text-slate-400 hover:text-white rounded transition cursor-pointer">
+                                                Cancelar
+                                            </button>
+                                            <button type="button" @click="applyPicker()" class="px-3 py-1 bg-repix-blue hover:bg-repix-blueDark text-white text-xs font-bold rounded-lg transition shadow-xs cursor-pointer">
+                                                Aplicar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        
+                        <!-- Filtro de Tipo (Divergências vs Recuperadas) -->
+                        <select x-model="typeFilter" @change="loadDivergent(1)" class="text-xs py-1.5 px-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 font-semibold focus:outline-none focus:border-repix-blue">
+                            <option value="all">Filtro: Todas as Vendas</option>
+                            <option value="divergent">Apenas Divergências</option>
+                            <option value="recovered">Apenas Recuperadas</option>
+                        </select>
+
+                        <!-- Filtro de Envio -->
+                        <select x-model="exportedFilter" @change="loadDivergent(1)" class="text-xs py-1.5 px-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 focus:outline-none focus:border-repix-blue">
+                            <option value="all">Envio: Todos</option>
+                            <option value="not_exported">Apenas Não Enviadas</option>
+                            <option value="exported">Apenas Já Enviadas</option>
+                        </select>
+
+                        <!-- Ordenação -->
+                        <select x-model="orderBy" @change="loadDivergent(1)" class="text-xs py-1.5 px-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-700 dark:text-slate-300 focus:outline-none focus:border-repix-blue">
+                            <option value="date_desc">Mais Recentes</option>
+                            <option value="date_asc">Mais Antigas</option>
+                            <option value="not_exported_first">Não Enviadas 1º</option>
+                            <option value="exported_first">Já Enviadas 1º</option>
+                            <option value="amount_desc">Maior Valor</option>
+                        </select>
+                    </div>
+                </div>
+
+                
+                <!-- Toast de Sucesso na Recuperação -->
+                <div x-show="recoverySuccessMsg" x-cloak class="p-3 bg-blue-50 dark:bg-blue-950/50 rounded-xl border border-blue-200 dark:border-blue-800 text-xs text-blue-800 dark:text-blue-300 font-bold flex items-center gap-2 shadow-xs transition">
+                    <svg class="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    <span x-text="recoverySuccessMsg"></span>
+                </div>
+
+                <!-- Tabela Responsiva (10 por página) -->
+                <!-- Banner de Alerta de Divergências Bloqueadas por Saldo -->
+                <div x-show="lockedCount > 0" x-cloak class="p-3.5 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs mb-3 shadow-xs">
+                    <div class="flex items-center gap-2.5 text-red-800 dark:text-red-300">
+                        <svg class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                        </svg>
+                        <span>Você possui <strong class="font-bold text-red-900 dark:text-red-100" x-text="lockedCount"></strong> divergência(s) com comprovante bloqueadas por falta de saldo. A cobrança de 1 RePix é feita automaticamente em vendas divergentes com mais de 30 minutos de geradas.</span>
+                    </div>
+                    <button @click="openRechargeModal('Recarregue seus créditos para liberar a visualização e exportação das vendas bloqueadas.')" class="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition shrink-0 cursor-pointer shadow-xs">
+                        Recarregar Agora
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto w-full max-w-full border border-slate-200 dark:border-slate-800 rounded-lg">
+                    <table class="w-full text-left text-xs min-w-[960px]">
+                        <thead class="bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
+                            <tr>
+                                <th class="py-2.5 px-3 w-10 text-center">
+                                    <input type="checkbox" :checked="selectAll" @change="toggleSelectAll()" class="w-3.5 h-3.5 text-repix-blue rounded border-slate-300 focus:ring-repix-blue cursor-pointer" title="Selecionar todas liberadas">
+                                </th>
+                                <th class="py-2.5 px-3">Código da Venda</th>
+                                <th class="py-2.5 px-3">Nominal Recebedora</th>
+                                <th class="py-2.5 px-3">Valor</th>
+                                <th class="py-2.5 px-3">Status Envio</th>
+                                <th class="py-2.5 px-3">WhatsApp</th>
+                                <th class="py-2.5 px-3">Arquivo Comprovante</th>
+                                <th class="py-2.5 px-3">Data Venda</th>
+                                <th class="py-2.5 px-3 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-medium text-slate-700 dark:text-slate-300">
+                            <template x-if="loading">
+                                <tr>
+                                    <td colspan="9" class="py-8 text-center text-slate-400">
+                                        <div class="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-repix-blue mb-2"></div>
+                                        <p>Carregando divergências...</p>
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <template x-if="!loading && divergentTransactions.length === 0">
+                                <tr>
+                                    <td colspan="9" class="py-8 text-center text-slate-400">
+                                        Nenhuma divergência encontrada com os filtros selecionados.
+                                    </td>
+                                </tr>
+                            </template>
+
+                            <template x-if="!loading">
+                                <template x-for="tx in divergentTransactions" :key="tx.id">
+                                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition" :class="!tx.can_access ? 'bg-slate-50/40 dark:bg-slate-900/40 opacity-80' : (isSelected(tx.id) ? 'bg-blue-50/30 dark:bg-blue-950/20' : '')">
+                                        <td class="py-2.5 px-3 text-center">
+                                            <template x-if="!tx.can_access">
+                                                <span :title="tx.billing_status === 'waiting_delay_1h' ? 'Venda aguardando 1h (' + (tx.delay_remaining_minutes || 1) + 'm restantes). Liberada após a cobrança automática de 1 RePix.' : 'Bloqueada por falta de saldo (1 RePix). Recarregue para liberar.'">
+                                                    <input type="checkbox" disabled class="w-3.5 h-3.5 opacity-25 cursor-not-allowed text-slate-400 rounded">
+                                                </span>
+                                            </template>
+                                            <template x-if="tx.can_access">
+                                                <input type="checkbox" :checked="isSelected(tx.id)" @change="toggleSelect(tx.id)" class="w-3.5 h-3.5 text-repix-blue rounded border-slate-300 focus:ring-repix-blue cursor-pointer">
+                                            </template>
+                                        </td>
+                                        <td class="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-white" x-text="tx.id"></td>
+                                        <td class="py-2.5 px-3 truncate max-w-[140px]" x-text="tx.nominal_name"></td>
+                                        <td class="py-2.5 px-3 font-bold text-slate-900 dark:text-white" x-text="REPIX_CONFIG.formatBRL(tx.amount_cents)"></td>
+
+                                                                                <!-- Status de Envio / Recuperação -->
+                                        <td class="py-2.5 px-3">
+                                            <template x-if="tx.is_recovered">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80">
+                                                    Recuperada
+                                                </span>
+                                            </template>
+                                            <template x-if="!tx.is_recovered">
+                                                <template x-if="tx.dispute_exported">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-blue-50 dark:bg-blue-900/30 text-repix-blue dark:text-blue-400 border border-blue-200 dark:border-blue-800" title="Comprovante já baixado no pacote ZIP">
+                                                        Já Enviada
+                                                    </span>
+                                                </template>
+                                                <template x-if="!tx.dispute_exported">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                                        Pendente
+                                                    </span>
+                                                </template>
+                                            </template>
+                                        </td>
+
+                                        <!-- WhatsApp Status -->
+                                        <td class="py-2.5 px-3" x-html="REPIX_CONFIG.getWhatsAppBadge(tx.recovery_message_sent, tx.recovery_message_sent_at)"></td>
+
+                                        <td class="py-2.5 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-400 truncate max-w-[160px]" x-text="tx.proof_file_name || '-'"></td>
+                                        <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 font-mono text-[11px]" x-text="REPIX_CONFIG.formatDateTime(tx.created_at)"></td>
+                                        
+                                                                                <!-- Ações -->
+                                        <td class="py-2.5 px-3 text-center space-x-1 whitespace-nowrap">
+                                            <template x-if="!tx.can_access && !tx.is_recovered">
+                                                <button @click="openProofModal(tx)" class="px-2 py-1 font-semibold text-[11px] rounded transition cursor-pointer inline-flex items-center gap-1"
+                                                        :class="(tx.billing_status === 'waiting_delay_30m' || tx.billing_status === 'waiting_delay_1h') ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 hover:bg-amber-100 border border-amber-200 dark:border-amber-800' : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 border border-red-200 dark:border-red-800'"
+                                                        :title="(tx.billing_status === 'waiting_delay_30m' || tx.billing_status === 'waiting_delay_1h') ? 'Aguardando 30 min (' + (tx.delay_remaining_minutes || 1) + 'm restantes). Liberado após cobrança automática de 1 RePix.' : 'Comprovante bloqueado por falta de saldo. Clique para recarregar.'">
+                                                    <span x-text="(tx.billing_status === 'waiting_delay_30m' || tx.billing_status === 'waiting_delay_1h') ? 'Aguardando' : 'Bloqueado'"></span>
+                                                </button>
+                                            </template>
+                                            <template x-if="tx.can_access || tx.is_recovered">
+                                                <button @click="openProofModal(tx)" class="px-2 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-semibold text-[11px] rounded transition cursor-pointer">
+                                                    Ver
+                                                </button>
+                                            </template>
+                                            
+                                            <button @click="openDirectWhatsApp(tx)"
+                                                    :disabled="(tx.billing_status === 'waiting_delay_30m' || tx.billing_status === 'waiting_delay_1h') || (!tx.can_access && !tx.is_recovered)"
+                                                    class="px-2 py-1 font-semibold text-[11px] rounded transition inline-flex items-center"
+                                                    :class="((tx.billing_status === 'waiting_delay_30m' || tx.billing_status === 'waiting_delay_1h') || (!tx.can_access && !tx.is_recovered)) ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600 border border-slate-200 dark:border-slate-700 opacity-40 cursor-not-allowed' : 'bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-pointer'"
+                                                    :title="(tx.billing_status === 'waiting_delay_30m' || tx.billing_status === 'waiting_delay_1h') ? 'Aguardando 30 min (' + (tx.delay_remaining_minutes || 1) + 'm restantes).' : 'Abrir WhatsApp oficial pré-preenchido'">
+                                                WhatsApp
+                                            </button>
+
+                                            <template x-if="!tx.is_recovered">
+                                                <button @click="toggleManualExportStatus(tx)" :disabled="!tx.can_access" class="px-2 py-1 border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-[11px] font-medium rounded transition" :class="!tx.can_access ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer'" :title="!tx.can_access ? 'Venda não cobrada do saldo.' : (tx.dispute_exported ? 'Marcar como não enviada' : 'Marcar como já enviada')">
+                                                    <span x-text="tx.dispute_exported ? 'Desmarcar' : 'Marcar'"></span>
+                                                </button>
+                                            </template>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Paginação Server-Side (10 itens por página) -->
+                <div class="flex items-center justify-between text-xs text-slate-600 dark:text-slate-400 pt-2">
+                    <div>
+                        Página <strong class="text-slate-900 dark:text-white" x-text="currentPage"></strong> de <strong class="text-slate-900 dark:text-white" x-text="totalPages"></strong> (<span x-text="totalItems"></span> divergências no total)
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button @click="loadDivergent(currentPage - 1)" :disabled="currentPage <= 1" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                            Anterior
+                        </button>
+                        <button @click="loadDivergent(currentPage + 1)" :disabled="currentPage >= totalPages" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 font-semibold disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                            Próxima
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+        <!-- ========================================== -->
+    <!-- MODAL PRINCIPAL DE AUTOMAÇÃO WHATSAPP      -->
+    <!-- ========================================== -->
+    <div x-show="whatsappModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/75 flex items-center justify-center p-3 sm:p-4" style="display: none;">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative max-h-[90vh] flex flex-col" @click.away="closeWhatsAppModal()">
+            
+            <!-- Header do Modal -->
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center border border-emerald-500/20">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.073-2.072-.497-1.761-.728-2.884-2.518-2.971-2.635-.088-.117-.714-.95-.714-1.814 0-.865.452-1.29.613-1.464.16-.175.352-.218.47-.218.118 0 .235.002.338.007.108.006.252-.041.393.3.145.349.497 1.21.541 1.298.043.088.073.19.014.305-.058.117-.087.19-.175.292-.088.103-.185.229-.264.307-.088.088-.18.183-.078.358.103.175.457.754.981 1.221.675.601 1.244.787 1.42.875.175.088.277.073.38-.044.103-.117.439-.511.556-.687.117-.175.234-.146.394-.088.16.059 1.018.48 1.194.568.175.088.293.131.336.205.044.073.044.423-.1.828z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white font-heading">Configuração da Mensagem WhatsApp</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Personalize o modelo de texto pré-preenchido para contato e recuperação Pix</p>
+                    </div>
+                </div>
+                <button @click="closeWhatsAppModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Navegação em Abas -->
+            <div class="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 mb-4 text-xs font-semibold">
+                <!-- Aba 1 Desabilitada -->
+                <button disabled type="button" class="px-3 py-1.5 rounded-lg opacity-40 cursor-not-allowed text-slate-400 dark:text-slate-500 flex items-center gap-1.5 bg-slate-100/50 dark:bg-slate-800/30" title="Disparos automáticos em segundo plano disponíveis em breve">
+                    <span>1. Conexão Automática</span>
+                    <span class="text-[9px] px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 font-normal">Em breve</span>
+                </button>
+                <!-- Aba 2 Desabilitada -->
+                <button disabled type="button" class="px-3 py-1.5 rounded-lg opacity-40 cursor-not-allowed text-slate-400 dark:text-slate-500 flex items-center gap-1.5 bg-slate-100/50 dark:bg-slate-800/30" title="Regras automáticas disponíveis em breve">
+                    <span>2. Regras de Disparo</span>
+                    <span class="text-[9px] px-1 py-0.2 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 font-normal">Em breve</span>
+                </button>
+                <!-- Aba 3 Ativa & Principal -->
+                <button @click="whatsappActiveTab = 'template'" 
+                        :class="whatsappActiveTab === 'template' ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                        class="px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-xs">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                    <span>3. Mensagem & Preview</span>
+                </button>
+            </div>
+
+            <!-- Conteúdo das Abas (Scrollável) -->
+            <div class="flex-1 overflow-y-auto pr-1 space-y-4 text-xs">
+                
+                <!-- ABA 1: CONEXÃO & QR CODE -->
+                <div x-show="whatsappActiveTab === 'connection'" class="space-y-4">
+                    
+                    <!-- Card de Status da Conexão -->
+                    <div class="p-4 rounded-xl border" :class="whatsappConfig.instance_status === 'connected' ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/80' : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm"
+                                     :class="whatsappConfig.instance_status === 'connected' ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.073-2.072-.497-1.761-.728-2.884-2.518-2.971-2.635-.088-.117-.714-.95-.714-1.814 0-.865.452-1.29.613-1.464.16-.175.352-.218.47-.218.118 0 .235.002.338.007.108.006.252-.041.393.3.145.349.497 1.21.541 1.298.043.088.073.19.014.305-.058.117-.087.19-.175.292-.088.103-.185.229-.264.307-.088.088-.18.183-.078.358.103.175.457.754.981 1.221.675.601 1.244.787 1.42.875.175.088.277.073.38-.044.103-.117.439-.511.556-.687.117-.175.234-.146.394-.088.16.059 1.018.48 1.194.568.175.088.293.131.336.205.044.073.044.423-.1.828z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-slate-900 dark:text-white">Estado da Instância:</span>
+                                        <template x-if="whatsappConfig.instance_status === 'connected'">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                                                ● Conectado (Online)
+                                            </span>
+                                        </template>
+                                        <template x-if="whatsappConfig.instance_status === 'connecting'">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                                                Aguardando Leitura do QR Code
+                                            </span>
+                                        </template>
+                                        <template x-if="whatsappConfig.instance_status === 'disconnected'">
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-400">
+                                                ○ Desconectado
+                                            </span>
+                                        </template>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 font-mono mt-0.5" x-text="`Instância: ${whatsappConfig.instance_name}`"></p>
+                                </div>
+                            </div>
+
+                            <!-- Botões de Conexão -->
+                            <div class="flex items-center gap-2">
+                                <button @click="openQrCodeModal()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition flex items-center gap-1.5 shadow-xs">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"></path>
+                                    </svg>
+                                    <span>Gerar QR Code</span>
+                                </button>
+
+                                <template x-if="whatsappConfig.instance_status === 'connected'">
+                                    <button @click="disconnectWhatsApp()" :disabled="whatsappLoading" class="px-3 py-1.5 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-lg font-semibold hover:bg-red-100 transition">
+                                        Desconectar
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Configurações Técnicas da Instância (Opcional / Host) -->
+                    <div class="p-3.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3">
+                        <h4 class="font-bold text-slate-800 dark:text-slate-200">Parâmetros da Evolution API</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">Nome da Instância:</label>
+                                <input type="text" x-model="whatsappConfig.instance_name" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-slate-900 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">URL Base Evolution API:</label>
+                                <input type="text" x-model="whatsappConfig.api_url" class="w-full p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg font-mono text-slate-900 dark:text-white" placeholder="http://localhost:8080">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ABA 2: REGRAS DE DISPARO -->
+                <div x-show="whatsappActiveTab === 'rules'" class="space-y-4">
+                    
+                    <!-- Toggle Ativação Geral -->
+                    <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-slate-900 dark:text-white text-xs sm:text-sm block">Recuperação Automática Pix</span>
+                            <p class="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">Disparar WhatsApp se a venda continuar pendente e sem comprovante</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" x-model="whatsappConfig.is_active" class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                        </label>
+                    </div>
+
+                    <!-- Seletor de Tempo de Espera (Delay) -->
+                    <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 space-y-2">
+                        <label class="block font-bold text-slate-900 dark:text-white">Tempo de Espera após geração do Pix:</label>
+                        <p class="text-slate-500 dark:text-slate-400 text-[11px]">Intervalo seguro para o comprador concluir o pagamento no app do banco antes do contato:</p>
+                        
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2">
+                            <template x-for="min in [5, 10, 15, 30, 60]" :key="min">
+                                <button type="button" @click="whatsappConfig.delay_minutes = min" 
+                                        :class="whatsappConfig.delay_minutes === min ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700'"
+                                        class="p-2.5 rounded-lg text-center transition">
+                                    <span class="block text-sm" x-text="`${min} min`"></span>
+                                    <span class="text-[10px] opacity-80" x-text="min === 15 ? 'Recomendado' : ''"></span>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Proteção Anti-Ban e Anti-Spam -->
+                    <div class="p-3.5 bg-blue-50/60 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800/50 flex items-start gap-2.5">
+                        <svg class="w-4 h-4 text-repix-blue dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <div class="text-[11px] text-slate-600 dark:text-slate-300">
+                            <strong>Proteção Anti-Ban Ativa:</strong> Jitter inteligente de 3 a 7 segundos entre disparos consecutivos e comportamento humano de digitação com cadência natural na Evolution API.
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ABA 3: TEMPLATE & PREVIEW -->
+                <div x-show="whatsappActiveTab === 'template'" class="space-y-4">
+                    
+                    <div>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="font-bold text-slate-900 dark:text-white">Mensagem Personalizada:</label>
+                            <span class="text-[11px] text-slate-400">Suporta formatação do WhatsApp (*negrito*, _itálico_)</span>
+                        </div>
+
+                        <!-- Chips de Tags Clicáveis -->
+                        <div class="flex flex-wrap items-center gap-1.5 mb-2">
+                            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Inserir tag:</span>
+                            <button type="button" @click="insertTemplateTag('{nome}')" class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded font-mono text-[11px] hover:bg-emerald-100 transition">
+                                + {nome}
+                            </button>
+                            <button type="button" @click="insertTemplateTag('{valor}')" class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded font-mono text-[11px] hover:bg-emerald-100 transition">
+                                + {valor}
+                            </button>
+                            <button type="button" @click="insertTemplateTag('{codigo_pix}')" class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded font-mono text-[11px] hover:bg-emerald-100 transition">
+                                + {codigo_pix}
+                            </button>
+                            <button type="button" @click="insertTemplateTag('{link_comprovante}')" class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded font-mono text-[11px] hover:bg-emerald-100 transition">
+                                + {link_comprovante}
+                            </button>
+                        </div>
+
+                        <!-- Textarea de Edição -->
+                        <textarea x-model="whatsappConfig.message_template" rows="7" class="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-emerald-500" placeholder="Digite seu template..."></textarea>
+                        <p class="text-[11px] text-slate-400 mt-1">Dica Spintax: Use variações como <code class="bg-slate-200 dark:bg-slate-800 px-1 rounded text-slate-700 dark:text-slate-300">{Olá|Oi|Tudo bem}</code> para alternar saudações automaticamente.</p>
+                    </div>
+
+                    <!-- Live WhatsApp Bubble Preview -->
+                    <div class="space-y-1.5">
+                        <label class="font-bold text-slate-900 dark:text-white">Prévia da Mensagem no WhatsApp:</label>
+                        <div class="p-3.5 rounded-xl bg-[#e5ddd5] dark:bg-[#0b141a] border border-slate-300 dark:border-slate-800 flex justify-end">
+                            <div class="max-w-[85%] bg-white dark:bg-[#005c4b] text-slate-800 dark:text-slate-100 p-3 rounded-xl rounded-tr-none shadow-sm text-xs space-y-1 relative font-sans leading-relaxed">
+                                <div class="whitespace-pre-line" x-text="getRenderedTemplatePreview()"></div>
+                                <div class="text-[9px] text-slate-400 text-right font-mono flex items-center justify-end gap-1 pt-1">
+                                    <span>14:32</span>
+                                    <svg class="w-3 h-3 text-blue-400 inline" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Enviar Teste para Próprio Número -->
+                    <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                        <label class="font-bold text-slate-800 dark:text-slate-200">Disparar Mensagem de Teste:</label>
+                        <div class="flex items-center gap-2">
+                            <input type="text" x-model="whatsappTestPhone" placeholder="Ex: 5511999998888 (com DDD)" class="flex-1 p-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white">
+                            <button type="button" @click="sendTestMessage()" :disabled="whatsappTestLoading" class="px-4 py-2 bg-slate-800 dark:bg-slate-700 hover:bg-slate-700 text-white font-bold rounded-lg transition disabled:opacity-50">
+                                <span x-text="whatsappTestLoading ? 'Enviando...' : 'Enviar Teste'"></span>
+                            </button>
+                        </div>
+                        <template x-if="whatsappTestResult">
+                            <div class="p-2 rounded text-[11px] font-semibold" :class="whatsappTestResult.success ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'" x-text="whatsappTestResult.detail"></div>
+                        </template>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Footer com Botão de Salvar -->
+            <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div>
+                    <span x-show="whatsappSaveSuccess" class="text-xs font-bold text-emerald-600 dark:text-emerald-400">Configurações salvas com sucesso!</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button @click="closeWhatsAppModal()" class="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">
+                        Fechar
+                    </button>
+                    <button @click="saveWhatsAppConfig()" :disabled="whatsappLoading" class="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5">
+                        <span x-text="whatsappLoading ? 'Salvando...' : 'Salvar Modelo'"></span>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL DE QR CODE (CONEXÃO EVOLUTION API)    -->
+    <!-- ========================================== -->
+    <div x-show="whatsappQrModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 text-center relative" @click.away="closeQrCodeModal()">
+            
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white font-heading">Escanear QR Code WhatsApp</h3>
+                <button @click="closeQrCodeModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Abra o WhatsApp no celular &rarr; Aparelhos Conectados &rarr; Conectar Aparelho</p>
+
+            <!-- Container da Imagem QR Code -->
+            <div class="w-56 h-56 mx-auto bg-white p-3 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center mb-4">
+                <template x-if="whatsappLoading">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span class="text-xs text-slate-500 font-medium">Gerando QR Code...</span>
+                    </div>
+                </template>
+                <template x-if="!whatsappLoading && whatsappQrData?.qrcode">
+                    <img :src="whatsappQrData.qrcode" alt="QR Code WhatsApp" class="w-full h-full object-contain">
+                </template>
+            </div>
+
+            <div class="flex items-center justify-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 mb-4">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></div>
+                <span>Aguardando leitura do aparelho...</span>
+            </div>
+
+            <button @click="closeQrCodeModal()" class="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">
+                Concluir / Fechar
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    
+
+    <!-- MODAL DE DISPARO MANUAL DE WHATSAPP        -->
+    <!-- ========================================== -->
+    <div x-show="manualWhatsAppModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/75 flex items-center justify-center p-3 sm:p-4" style="display: none;">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative" @click.away="closeManualWhatsAppModal()">
+            
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-sm">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.073-2.072-.497-1.761-.728-2.884-2.518-2.971-2.635-.088-.117-.714-.95-.714-1.814 0-.865.452-1.29.613-1.464.16-.175.352-.218.47-.218.118 0 .235.002.338.007.108.006.252-.041.393.3.145.349.497 1.21.541 1.298.043.088.073.19.014.305-.058.117-.087.19-.175.292-.088.103-.185.229-.264.307-.088.088-.18.183-.078.358.103.175.457.754.981 1.221.675.601 1.244.787 1.42.875.175.088.277.073.38-.044.103-.117.439-.511.556-.687.117-.175.234-.146.394-.088.16.059 1.018.48 1.194.568.175.088.293.131.336.205.044.073.044.423-.1.828z"/></svg>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white font-heading">Notificar Cliente sobre Divergência Pix</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400" x-text="`Transação: ${manualTx?.id}`"></p>
+                    </div>
+                </div>
+                <button @click="closeManualWhatsAppModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+
+            <div class="space-y-3.5 text-xs">
+                <!-- Resumo da Transação -->
+                <div class="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div>
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Cliente:</span>
+                        <strong class="text-slate-900 dark:text-white truncate block" x-text="manualTx?.customer_name || 'Cliente'"></strong>
+                    </div>
+                    <div>
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">Valor Pix:</span>
+                        <strong class="text-slate-900 dark:text-white block" x-text="manualTx ? REPIX_CONFIG.formatBRL(manualTx.amount_cents) : ''"></strong>
+                    </div>
+                </div>
+
+                <!-- Input Telefone -->
+                <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Telefone WhatsApp do Cliente:</label>
+                    <input type="text" x-model="manualPhone" class="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white" placeholder="5511999998888">
+                </div>
+
+                <!-- Mensagem Customizada -->
+                <div>
+                    <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Mensagem a Enviar:</label>
+                    <textarea x-model="manualCustomMessage" rows="5" class="w-full p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-mono text-slate-900 dark:text-white"></textarea>
+                </div>
+
+                <template x-if="manualResult">
+                    <div class="p-3 rounded-lg text-xs font-semibold" :class="manualResult.success ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'" x-text="manualResult.message || manualResult.detail"></div>
+                </template>
+            </div>
+
+            <div class="mt-5 pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2">
+                <button @click="closeManualWhatsAppModal()" class="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold hover:bg-slate-200 transition">
+                    Cancelar
+                </button>
+                <button @click="sendManualRecovery()" :disabled="manualSending" class="px-5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-xs flex items-center gap-1.5">
+                    <span x-text="manualSending ? 'Disparando...' : 'Disparar WhatsApp'"></span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL DE COMPROVANTE -->
+    <div x-show="proofModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white dark:bg-slate-900 rounded-xl max-w-xl w-full p-5 shadow-2xl border border-slate-200 dark:border-slate-800 relative" @click.away="closeProofModal()">
+            
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-3">
+                <div>
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white font-heading">Comprovante de Pagamento Pix</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-mono truncate max-w-xs" x-text="selectedTx?.proof_file_name"></p>
+                </div>
+                <button @click="closeProofModal()" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Dados -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-lg mb-3 border border-slate-200 dark:border-slate-700">
+                <div>
+                    <span class="text-slate-500 dark:text-slate-400 block">ID:</span>
+                    <strong class="font-mono text-slate-900 dark:text-white" x-text="selectedTx?.id"></strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 dark:text-slate-400 block">Valor:</span>
+                    <strong class="text-slate-900 dark:text-white" x-text="selectedTx ? REPIX_CONFIG.formatBRL(selectedTx.amount_cents) : ''"></strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 dark:text-slate-400 block">Status Gateway:</span>
+                    <strong class="text-amber-500 font-bold" x-text="selectedTx?.gateway_status?.toUpperCase()"></strong>
+                </div>
+                <div>
+                    <span class="text-slate-500 dark:text-slate-400 block">Envio:</span>
+                    <strong :class="selectedTx?.dispute_exported ? 'text-repix-blue' : 'text-amber-600'" x-text="selectedTx?.dispute_exported ? 'JÁ ENVIADA' : 'PENDENTE'"></strong>
+                </div>
+            </div>
+
+            <!-- Preview -->
+            <div class="max-h-80 min-h-[180px] bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center overflow-hidden border border-slate-200 dark:border-slate-700 mb-4 p-2">
+                <template x-if="proofModalIsPdf">
+                    <iframe :src="proofModalUrl" class="w-full h-72 rounded"></iframe>
+                </template>
+                <template x-if="!proofModalIsPdf">
+                    <img :src="proofModalUrl" alt="Comprovante" class="max-h-72 w-auto object-contain rounded">
+                </template>
+            </div>
+
+            <div class="flex justify-end">
+                <button @click="closeProofModal()" class="px-4 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-xs font-semibold hover:bg-slate-800 transition">
+                    Fechar
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL DE IMPLEMENTAÇÃO: CHECKOUT PIX & WEBHOOK MANGOFY -->
+    <div x-show="integrationModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 flex items-center justify-center p-4" style="display: none;">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative max-h-[90vh] flex flex-col" @click.away="integrationModalOpen = false">
+            
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-repix-blue dark:text-blue-400 flex items-center justify-center font-bold text-base"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div>
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-900 dark:text-white font-heading">Integração MangoFy & Checkout Pix</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Webhook de sincronização de vendas e Widget de captura de comprovante</p>
+                    </div>
+                </div>
+                <button @click="integrationModalOpen = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-1 cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Toast / Alerta de Feedback -->
+            <div x-show="configFeedbackMessage" x-cloak class="mb-4 p-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-all"
+                 :class="configFeedbackType === 'success' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'">
+                <div class="flex items-center gap-2">
+                    <template x-if="configFeedbackType === 'success'">
+                        <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                    </template>
+                    <template x-if="configFeedbackType === 'error'">
+                        <svg class="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </template>
+                    <span x-text="configFeedbackMessage"></span>
+                </div>
+                <button @click="configFeedbackMessage = ''" class="text-xs font-bold px-2 py-0.5 opacity-70 hover:opacity-100 cursor-pointer">&times;</button>
+            </div>
+
+                        <!-- Abas do Modal -->
+            <div class="flex items-center gap-1.5 border-b border-slate-200 dark:border-slate-800 pb-2 mb-4 text-xs font-semibold overflow-x-auto">
+                <button @click="integrationTab = 'ai_prompt'"
+                        :class="integrationTab === 'ai_prompt' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                        class="px-3 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 cursor-pointer">
+                    <span>🤖</span> Prompt para IA <span class="text-[10px] bg-emerald-500 text-white font-bold px-1.5 py-0.2 rounded-full">Recomendado</span>
+                </button>
+                <button @click="integrationTab = 'widget'"
+                        :class="integrationTab === 'widget' ? 'bg-blue-50 dark:bg-blue-950/60 text-repix-blue dark:text-blue-400 border border-blue-200 dark:border-blue-800 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                        class="px-3 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 cursor-pointer">
+                    <span>⚡</span> Script SDK (Direto)
+                </button>
+                <button @click="integrationTab = 'bridge'"
+                        :class="integrationTab === 'bridge' ? 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                        class="px-3 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 cursor-pointer">
+                    <span>🔀</span> Tela Intermediária (Bridge)
+                </button>
+                <button @click="integrationTab = 'webhook'"
+                        :class="integrationTab === 'webhook' ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                        class="px-3 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 cursor-pointer">
+                    <span>🔗</span> Webhook MangoFy
+                    <span x-show="isMangofyConfigured" class="w-2 h-2 rounded-full bg-emerald-500 ml-1" title="Configurado"></span>
+                    <span x-show="!isMangofyConfigured" class="w-2 h-2 rounded-full bg-red-500 ml-1" title="Pendente"></span>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto space-y-4 text-xs text-slate-700 dark:text-slate-300 pr-1">
+                
+                
+                <!-- ABA 0: PROMPT PRONTO PARA IA (RECOMENDADO) -->
+                <div x-show="integrationTab === 'ai_prompt'" class="space-y-4">
+                    <div class="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
+                            <span class="text-base">🤖</span>
+                            Integração 100% Automatizada com IA (ChatGPT, Claude, Cursor, v0):
+                        </div>
+                        <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                            Basta copiar o prompt abaixo e colar na sua ferramenta de Inteligência Artificial junto com o código do seu checkout. A IA saberá exatamente onde injetar o botão para que ele <strong>apareça exclusivamente na tela do Pix gerado</strong> (sem poluir o carrinho, cartão ou dados pessoais) e configurará a <strong>tela intermediária (bridge)</strong> caso o comprador não anexe o comprovante.
+                        </p>
+                    </div>
+
+                    <!-- Campos Opcionais para Customizar o Prompt -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200 dark:border-slate-700/60 text-xs">
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700 dark:text-slate-300 text-[11px]">URL do Upsell ou Próxima Página (opcional):</label>
+                            <input type="text" x-model="aiUpsellUrl" placeholder="Ex: https://minhaloja.com/upsell-1" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="font-bold text-slate-700 dark:text-slate-300 text-[11px]">Nome do arquivo do seu Checkout (opcional):</label>
+                            <input type="text" x-model="aiCheckoutFile" placeholder="Ex: checkout.html ou index.js" class="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500">
+                        </div>
+                    </div>
+
+                    <!-- Visualizador do Prompt -->
+                    <div class="space-y-1.5">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 dark:text-white text-xs">Prompt Formatado para Copiar:</span>
+                            <span class="text-[10px] text-slate-400">Pronto para qualquer IA</span>
+                        </div>
+                        <div class="relative">
+                            <textarea readonly :value="getAiPromptCode()" rows="7" class="w-full bg-slate-950 text-emerald-400 font-mono text-[11px] p-3 rounded-xl border border-slate-800 select-all focus:outline-none leading-relaxed"></textarea>
+                        </div>
+                        <button type="button" @click="copyAiPrompt()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+                            <span x-text="aiPromptCopied ? 'Prompt Copiado com Sucesso!' : 'Copiar Prompt Completo para IA'"></span>
+                        </button>
+                    </div>
+
+                    <!-- Destaques da Solução -->
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-center">
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-200">🎯 Exibição Estrita</div>
+                            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Apenas após gerar o Pix</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-200">🔄 Suporte a Upsells</div>
+                            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Front, Upsell 1, 2 e 3</div>
+                        </div>
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                            <div class="text-xs font-bold text-slate-800 dark:text-slate-200">🔀 Ponte Intermediária</div>
+                            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">Captura antes do redirecionamento</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA BRIDGE: TELA INTERMEDIÁRIA ENTRE ETAPAS -->
+                <div x-show="integrationTab === 'bridge'" class="space-y-4">
+                    <div class="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl space-y-2">
+                        <div class="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold text-xs">
+                            <span class="text-base">🔀</span>
+                            Tela Intermediária de Captura (Bridge Page):
+                        </div>
+                        <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                            A Tela Intermediária funciona como uma ponte inteligente entre o checkout principal e o Upsell (ou entre o Upsell 1 e o Upsell 2). Caso o comprador não tenha subido o comprovante no botão da página de Pix e clique em "Já realizei o pagamento / Continuar", ele cai nesta tela para anexar o comprovante antes de seguir ao funil.
+                        </p>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block font-bold text-slate-900 dark:text-white text-xs">Estrutura da URL da Ponte (Bridge):</label>
+                        <div class="relative">
+                            <input type="text" readonly :value="window.location.origin + '/bridge?sale_id=CODIGO_VENDA&amount_cents=VALOR_CENTAVOS&next_url=URL_DO_UPSELL'" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 pr-28 text-xs font-mono text-slate-900 dark:text-slate-100 select-all focus:outline-none">
+                            <button type="button" @click="copyBridgeSnippet()" class="absolute right-1.5 top-1.5 px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold rounded-md transition cursor-pointer">
+                                <span x-text="bridgeSnippetCopied ? 'Copiado!' : 'Copiar Código'"></span>
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Exemplo prático: ao gerar uma venda de R$ 97,00 com código MGF-994, passe <code class="font-mono text-purple-500">sale_id=MGF-994&amount_cents=9700&next_url=https://sualoja.com/upsell-1</code>.</p>
+                    </div>
+
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+                        <h4 class="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">Como funciona o fluxo do comprador:</h4>
+                        <ol class="space-y-1.5 pl-4 list-decimal text-slate-600 dark:text-slate-300 text-[11px] leading-relaxed">
+                            <li>Comprador gera o Pix na página principal.</li>
+                            <li>Se anexar na própria página, é redirecionado diretamente para o Upsell 1.</li>
+                            <li>Se não anexar e clicar para avançar, a ponte (<code class="text-purple-400 font-mono">/bridge</code>) abre uma tela limpa e focada exclusivamente na validação do comprovante.</li>
+                            <li>Assim que ele anexa, a API atrela o arquivo à venda e redireciona automaticamente para o seu Upsell ou página de obrigado!</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- ABA 1: WEBHOOK MANGOFY -->
+                <div x-show="integrationTab === 'webhook'" class="space-y-4">
+                    
+                    <!-- Card de Status do Webhook -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-2">
+                                <svg class="w-4 h-4 text-repix-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                                Webhook de Notificações MangoFy:
+                            </span>
+                            <template x-if="isMangofyConfigured">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Concluído
+                                </span>
+                            </template>
+                            <template x-if="!isMangofyConfigured">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Pendente
+                                </span>
+                            </template>
+                        </div>
+                        <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                            O RePix não gera cobranças Pix para suas vendas — as vendas são geradas normalmente pela MangoFy. Basta cadastrar a URL de Webhook abaixo na sua conta MangoFy para que o RePix receba as vendas e faça a conciliação automática.
+                        </p>
+                    </div>
+
+                    <!-- Campo do Link de Integração Webhook -->
+                    <div class="space-y-1.5">
+                        <label class="block font-bold text-slate-900 dark:text-white text-xs">Seu Link de Integração Exclusivo (Webhook):</label>
+                        <div class="relative">
+                            <input type="text" readonly :value="getIntegrationWebhookUrl()" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg p-2.5 pr-28 text-xs font-mono text-slate-900 dark:text-slate-100 select-all focus:outline-none">
+                            <button @click="copyIntegrationWebhookUrl()" class="absolute right-1.5 top-1.5 px-3 py-1 bg-repix-blue hover:bg-repix-blueDark text-white text-xs font-semibold rounded-md transition cursor-pointer">
+                                <span x-text="integrationUrlCopied ? 'Copiado!' : 'Copiar Link'"></span>
+                            </button>
+                        </div>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">Este link recebe os dados das transações e atualiza o status dos pagamentos no RePix.</p>
+                    </div>
+
+                    <!-- Passo a Passo Ilustrado -->
+                    <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-4 border border-slate-200 dark:border-slate-700 space-y-2.5">
+                        <h4 class="font-bold text-slate-900 dark:text-white text-xs uppercase tracking-wider">Como cadastrar na MangoFy:</h4>
+                        <ol class="space-y-2 pl-4 list-decimal text-slate-600 dark:text-slate-300 leading-relaxed">
+                            <li>Acesse a <strong>MangoFy</strong> em <strong>Integrações &rarr; Cadastrar integração</strong>.</li>
+                            <li>No campo <strong>Nome</strong>, digite <code class="bg-white dark:bg-slate-900 px-1 py-0.5 rounded border border-slate-300 dark:border-slate-700 font-semibold text-slate-900 dark:text-white">RePix Conciliação</code>.</li>
+                            <li>No campo <strong>Link de integração</strong>, cole o link exclusivo copiado acima.</li>
+                            <li>Em <strong>Eventos aplicações</strong>, marque <strong>Venda Aprovada</strong>, <strong>Pix Pendente</strong>, <strong>Pix Expirado</strong> e <strong>Venda Recusada</strong>.</li>
+                            <li>Clique em <strong>Salvar</strong> na MangoFy. A sincronização estará ativa!</li>
+                        </ol>
+                    </div>
+
+                    <!-- Botão de Conclusão -->
+                    <div class="pt-1 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400">Cadastrou a URL na MangoFy? Marque como concluído.</span>
+                        <button @click="toggleMangofyConfigured()" class="px-4 py-2 font-bold text-xs rounded-lg transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                                :class="isMangofyConfigured ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300' : 'bg-emerald-600 hover:bg-emerald-700 text-white'">
+                            <span x-text="isMangofyConfigured ? 'Concluído (Clique para alterar)' : 'Marcar como Concluído'"></span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ABA 2: WIDGET CHECKOUT PIX (CAPTURA DE COMPROVANTE) -->
+                <div x-show="integrationTab === 'widget'" class="space-y-4">
+                    
+                    <!-- Card de Explicação do Widget -->
+                    <div class="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-2">
+                                <svg class="w-4 h-4 text-repix-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                Widget de Captura de Comprovante:
+                            </span>
+                            <template x-if="isPixConfigured">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Concluído
+                                </span>
+                            </template>
+                            <template x-if="!isPixConfigured">
+                                <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Pendente
+                                </span>
+                            </template>
+                        </div>
+                        <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
+                            A venda Pix já foi gerada na MangoFy. A única função deste script é captar o comprovante de pagamento da venda que já foi gerada diretamente na tela do checkout e redirecionar o cliente para sua página de Upsell sem fazê-lo esperar.
+                        </p>
+                    </div>
+
+                    <!-- Script Snippet -->
+                    <div class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-slate-900 dark:text-white text-xs flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded-full bg-repix-blue text-white flex items-center justify-center text-[11px] font-bold">1</span>
+                                Script para colar na sua página de Checkout Pix:
+                            </span>
+                            <button @click="copyWidgetSnippet()" class="px-2.5 py-1 bg-repix-blue hover:bg-repix-blueDark text-white font-semibold text-[11px] rounded transition shadow-xs cursor-pointer">
+                                <span x-text="widgetSnippetCopied ? 'Copiado!' : 'Copiar Código'"></span>
+                            </button>
+                        </div>
+                        
+                        <div class="relative bg-slate-950 text-slate-200 p-3 rounded-lg font-mono text-[11px] overflow-x-auto border border-slate-800 select-all leading-relaxed">
+&lt;!-- Widget RePix: Captura de Comprovante & Redirecionamento --&gt;
+&lt;script src="<span x-text="window.location.origin"></span>/assets/js/repix-widget.js"
+        data-sale-id="CODIGO_DA_VENDA_MANGOFY"
+        data-upsell-url="https://sualoja.com/upsell-1"
+        data-button-text="Já realizou o Pix? Envie seu comprovante para liberar o pedido"&gt;
+&lt;/script>
+                        </div>
+                    </div>
+
+                    <!-- Passo 2 & 3: Explicação do Fluxo -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-3 bg-blue-50/50 dark:bg-blue-950/30 rounded-xl border border-blue-200/80 dark:border-blue-800/50 space-y-1.5">
+                            <span class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[11px] font-bold">2</span>
+                                Onde Colar o Código:
+                            </span>
+                            <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                                Cole antes do fechamento <code class="bg-white dark:bg-slate-900 px-1 py-0.5 rounded border border-slate-300 dark:border-slate-700 font-mono text-repix-blue font-bold">&lt;/body&gt;</code> na tela de pagamento onde seu cliente visualiza a cobrança Pix já gerada pela MangoFy.
+                            </p>
+                        </div>
+
+                        <div class="p-3 bg-emerald-50/50 dark:bg-emerald-950/30 rounded-xl border border-emerald-200/80 dark:border-emerald-800/50 space-y-1.5">
+                            <span class="font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                                <span class="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[11px] font-bold">3</span>
+                                Redirecionamento com Comprovante:
+                            </span>
+                            <p class="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                                Ao anexar o comprovante da venda já feita, o cliente é enviado instantaneamente para a URL em <code class="font-mono text-emerald-600 dark:text-emerald-400 font-bold">data-upsell-url</code>.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Conclusão -->
+                    <div class="pt-1 flex items-center justify-between">
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400">Instalou o script no seu checkout? Marque como concluído.</span>
+                        <button @click="togglePixConfigured()" class="px-4 py-2 font-bold text-xs rounded-lg transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                                :class="isPixConfigured ? 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300' : 'bg-emerald-600 hover:bg-emerald-700 text-white'">
+                            <span x-text="isPixConfigured ? 'Concluído (Clique para alterar)' : 'Marcar como Instalado'"></span>
+                        </button>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                <button @click="integrationModalOpen = false" class="px-4 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-xs font-semibold hover:bg-slate-800 transition cursor-pointer">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- MODAL DE RECARGA DE SALDO (MANGOFY API)    -->
+    <!-- ========================================== -->
+    <div x-show="rechargeModalOpen" x-cloak class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-xl w-full p-5 sm:p-6 shadow-2xl border border-slate-200 dark:border-slate-800 relative max-h-[90vh] flex flex-col" @click.away="closeRechargeModal()">
+            
+            <!-- Cabeçalho do Modal -->
+            <div class="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3.5 mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-900 dark:text-white text-base">Recarga de Moedas RePix</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">Cobrança automática de 1 RePix após 30 minutos da venda divergente gerada</p>
+                    </div>
+                </div>
+                <button @click="closeRechargeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Aviso contextual (se houver tentativa de exportar sem saldo) -->
+            <div x-show="rechargeNotice" x-cloak class="mb-3 p-3 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-300 flex items-start gap-2">
+                <svg class="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span x-text="rechargeNotice"></span>
+            </div>
+
+            <div class="flex-1 overflow-y-auto space-y-4 pr-1">
+
+                <!-- Card de Saldo Atual -->
+                <div class="p-3.5 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent rounded-xl border border-emerald-500/20 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 uppercase font-semibold tracking-wider block">Saldo Disponível</span>
+                        <div class="flex items-baseline gap-2">
+                            <span class="text-2xl font-black text-slate-900 dark:text-white" x-text="Math.floor((balanceCents || 0) / 200) + ' RePix'"></span>
+                            <span class="text-xs text-slate-500 font-medium" x-text="'(R$ ' + (balanceReais || '0,00').replace('.', ',') + ')'"></span>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[11px] text-slate-500 dark:text-slate-400 block">Divergências Liberadas</span>
+                        <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400" x-text="Math.floor((balanceCents || 0) / 200) + ' vendas'"></span>
+                    </div>
+                </div>
+
+                <!-- Seletor de Valores Pré-definidos -->
+                <div class="space-y-1.5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300">Escolha o pacote de RePix:</label>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        <button type="button" @click="selectRechargeAmount(20)"
+                                :class="rechargeAmount === 20 && !customRechargeAmount ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold ring-1 ring-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'"
+                                class="p-2.5 rounded-xl border text-left transition cursor-pointer">
+                            <div class="text-sm font-extrabold">R$ 20,00</div>
+                            <div class="text-[10px] text-slate-400 font-semibold">10 RePix</div>
+                        </button>
+
+                        <button type="button" @click="selectRechargeAmount(50)"
+                                :class="rechargeAmount === 50 && !customRechargeAmount ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold ring-1 ring-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'"
+                                class="p-2.5 rounded-xl border text-left transition cursor-pointer relative">
+                            <span class="absolute -top-1.5 right-1.5 px-1.5 py-0.2 rounded text-[9px] bg-emerald-500 text-white font-black">POPULAR</span>
+                            <div class="text-sm font-extrabold">R$ 50,00</div>
+                            <div class="text-[10px] text-slate-400 font-semibold">25 RePix</div>
+                        </button>
+
+                        <button type="button" @click="selectRechargeAmount(100)"
+                                :class="rechargeAmount === 100 && !customRechargeAmount ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold ring-1 ring-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'"
+                                class="p-2.5 rounded-xl border text-left transition cursor-pointer">
+                            <div class="text-sm font-extrabold">R$ 100,00</div>
+                            <div class="text-[10px] text-slate-400 font-semibold">50 RePix</div>
+                        </button>
+
+                        <button type="button" @click="selectRechargeAmount(200)"
+                                :class="rechargeAmount === 200 && !customRechargeAmount ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold ring-1 ring-emerald-500' : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 text-slate-700 dark:text-slate-300'"
+                                class="p-2.5 rounded-xl border text-left transition cursor-pointer relative">
+                            <span class="absolute -top-1.5 right-1.5 px-1.5 py-0.2 rounded text-[9px] bg-red-600 text-white font-black shadow-xs">PROMO R$ 1,50</span>
+                            <div class="text-sm font-extrabold">R$ 200,00</div>
+                            <div class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">100 + 33 RePix</div>
+                        </button>
+                    </div>
+
+                    <div class="pt-1">
+                        <div class="relative flex items-center">
+                            <input type="text"
+                                   inputmode="numeric"
+                                   :value="customRechargeDisplay"
+                                   @input="handleCustomAmountInput($event)"
+                                   @keydown="handleCustomAmountKeydown($event)"
+                                   placeholder="Ou digite outro valor (mínimo R$ 20,00 até R$ 600,00)"
+                                   class="w-full text-xs p-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-emerald-500 transition">
+                        </div>
+                        <template x-if="isOddCustomAmount()">
+                            <p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium pt-1.5 flex items-center gap-1.5 text-left">
+                                <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <span>Valor ímpar: geraremos cobrança de R$ <strong x-text="getFinalRechargeAmount() + ',00'"></strong> para creditar <strong x-text="calculateRePixCoins(getFinalRechargeAmount()) + ' RePix'"></strong> exatos.</span>
+                            </p>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Abas de Pagamento: PIX vs Cartão vs Extrato -->
+                <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 text-xs font-semibold">
+                    <button type="button" @click="rechargeTab = 'pix'"
+                            :class="rechargeTab === 'pix' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                            class="px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>
+                        <span>PIX</span>
+                    </button>
+                    <button type="button" @click="rechargeTab = 'card'"
+                            :class="rechargeTab === 'card' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                            class="px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+                        <span>Cartão de Crédito</span>
+                    </button>
+                    <button type="button" @click="rechargeTab = 'history'"
+                            :class="rechargeTab === 'history' ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800' : 'text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800'"
+                            class="px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer ml-auto">
+                        <span>Extrato</span>
+                    </button>
+                </div>
+
+                <!-- Mensagem de Sucesso -->
+                <div x-show="rechargeSuccessMessage" x-cloak class="p-3 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <span x-text="rechargeSuccessMessage"></span>
+                </div>
+
+                <!-- Mensagem de Erro -->
+                <div x-show="rechargeErrorMessage" x-cloak class="p-3 bg-red-50 dark:bg-red-950/60 rounded-xl border border-red-200 dark:border-red-800 text-xs text-red-800 dark:text-red-300 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    <span x-text="rechargeErrorMessage"></span>
+                </div>
+
+                <!-- ABA PIX -->
+                <div x-show="rechargeTab === 'pix'" class="space-y-3 text-center">
+                    <!-- Estado Inicial: Botão explícito para Gerar Cobrança Pix -->
+                    <template x-if="!rechargePixData">
+                        <div class="p-5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-4">
+                            <div class="space-y-1">
+                                <span class="text-xs text-slate-500 dark:text-slate-400">Total a recarregar:</span>
+                                <div class="text-2xl font-black text-slate-900 dark:text-white" x-text="'R$ ' + getFinalRechargeAmount().toFixed(2).replace('.', ',')"></div>
+                                <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-400 font-bold text-xs">
+                                    <span>Você receberá:</span>
+                                    <strong class="text-sm" x-text="calculateRePixCoins(getFinalRechargeAmount()) + ' RePix'"></strong>
+                                    <template x-if="getFinalRechargeAmount() >= 200">
+                                        <span class="text-[10px] bg-red-600 text-white px-1.5 py-0.2 rounded font-black shadow-xs">R$ 1,50/un</span>
+                                    </template>
+                                </div>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 pt-1">O QR Code Pix e a chave Copia e Cola serão gerados no gateway MangoFy.</p>
+                            </div>
+                            
+                            <button type="button" @click="generatePix()" :disabled="rechargeLoading" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition shadow-md cursor-pointer flex items-center justify-center gap-2">
+                                <template x-if="!rechargeLoading">
+                                    <span>Gerar Cobrança</span>
+                                </template>
+                                <template x-if="rechargeLoading">
+                                    <span class="flex items-center gap-2">
+                                        <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                        <span>Gerando Cobrança...</span>
+                                    </span>
+                                </template>
+                            </button>
+                        </div>
+
+
+                    <!-- Estado com Cobrança Pix Gerada -->
+                    <template x-if="rechargePixData">
+                        <div class="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 space-y-3">
+                            <div class="w-48 h-48 mx-auto bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex items-center justify-center overflow-hidden">
+                                <template x-if="rechargePixData.pix?.pix_qrcode_image || rechargePixData.data?.pix?.pix_qrcode_image">
+                                    <img :src="rechargePixData.pix?.pix_qrcode_image || rechargePixData.data?.pix?.pix_qrcode_image" alt="QR Code Pix" class="w-full h-full object-contain">
+                                </template>
+                                <template x-if="!(rechargePixData.pix?.pix_qrcode_image || rechargePixData.data?.pix?.pix_qrcode_image) && (rechargePixData.pix?.pix_qrcode_text || rechargePixData.data?.pix?.pix_qrcode_text)">
+                                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=' + encodeURIComponent(rechargePixData.pix?.pix_qrcode_text || rechargePixData.data?.pix?.pix_qrcode_text)" alt="QR Code Pix" class="w-full h-full object-contain">
+                                </template>
+                            </div>
+                            
+                            <div class="text-xs text-slate-500 dark:text-slate-400 text-center">
+                                Pague via app do seu banco lendo o QR Code acima ou copie a chave:
+                            </div>
+
+                            <!-- Pix Copia e Cola -->
+                            <div class="flex items-center gap-1.5">
+                                <input type="text" readonly :value="rechargePixData.pix?.pix_qrcode_text || rechargePixData.data?.pix?.pix_qrcode_text || ''" class="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg p-2 text-[11px] font-mono select-all focus:outline-none truncate">
+                                <button type="button" @click="copyPixCode()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition shrink-0 cursor-pointer">
+                                    <span x-text="pixCopied ? 'Copiado!' : 'Copiar Chave'"></span>
+                                </button>
+                            </div>
+
+                            <!-- Ações do Pix -->
+                            <div class="pt-2 border-t border-slate-200 dark:border-slate-700/60 flex flex-col items-center gap-1.5">
+                                <button type="button" @click="cancelPixRecharge()" class="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 underline cursor-pointer">
+                                    Trocar valor ou cancelar cobrança
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- ABA CARTÃO DE CRÉDITO (DESABILITADA) -->
+                <div x-show="rechargeTab === 'card'" class="space-y-3">
+                    <div class="p-6 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/80 text-center space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-slate-200/70 dark:bg-slate-700/70 mx-auto flex items-center justify-center text-slate-400 dark:text-slate-500">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                        </div>
+                        <div class="space-y-1">
+                            <h4 class="text-sm font-bold text-slate-800 dark:text-slate-200">Cartão de Crédito Temporariamente Desabilitado</h4>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                                As recargas de RePix estão sendo processadas exclusivamente via PIX com confirmação pela MangoFy.
+                            </p>
+                        </div>
+                        <button type="button" @click="rechargeTab = 'pix'" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition cursor-pointer">
+                            Ir para Recarga via PIX
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ABA EXTRATO -->
+                <div x-show="rechargeTab === 'history'" class="space-y-2">
+                    <div class="flex items-center justify-between pb-1">
+                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Histórico de Movimentações</span>
+                        <button type="button" @click="exportHistoryTxt()" class="px-2.5 py-1 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-white text-white dark:text-slate-900 font-bold text-[11px] rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-xs" title="Baixar extrato completo em arquivo .txt">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                            <span>Exportar para .TXT</span>
+                        </button>
+                    </div>
+                    <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden text-xs">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
+                                <tr>
+                                    <th class="p-2">Data</th>
+                                    <th class="p-2">Descrição</th>
+                                    <th class="p-2 text-right">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                                <template x-for="item in creditHistory" :key="item.id">
+                                    <tr>
+                                        <td class="p-2 text-[11px] text-slate-500 font-mono" x-text="new Date(item.created_at).toLocaleDateString('pt-BR')"></td>
+                                        <td class="p-2 font-medium" x-text="item.description"></td>
+                                        <td class="p-2 text-right font-bold" :class="item.amount_cents > 0 ? 'text-emerald-500' : 'text-red-500'" x-text="(item.amount_cents > 0 ? '+' : '') + 'R$ ' + (item.amount_cents/100).toFixed(2).replace('.', ',')"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Rodapé do Modal -->
+            <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+                <button @click="closeRechargeModal()" class="px-4 py-1.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-lg text-xs font-semibold hover:bg-slate-800 transition cursor-pointer">
+                    Fechar
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL DE ALTERAÇÃO DE SENHA DO LOJISTA -->
+    <div x-show="changePasswordModalOpen" x-cloak
+         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+         style="display: none;">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 max-w-sm w-full p-6 shadow-2xl relative"
+             @click.outside="closePasswordModal()">
+            
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-blue-500/10 text-repix-blue dark:text-blue-400 flex items-center justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/></svg>
+                    </div>
+                    <h3 class="font-bold text-sm text-slate-900 dark:text-white">Alterar Senha da Conta</h3>
+                </div>
+                <button @click="closePasswordModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <!-- Feedback -->
+            <div x-show="changePasswordMsg" x-cloak class="mb-3 p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-700 dark:text-emerald-400 rounded-lg font-semibold">
+                <span x-text="changePasswordMsg"></span>
+            </div>
+            <div x-show="changePasswordError" x-cloak class="mb-3 p-2.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 text-xs text-red-700 dark:text-red-400 rounded-lg font-semibold">
+                <span x-text="changePasswordError"></span>
+            </div>
+
+            <form @submit.prevent="submitChangePassword()" class="space-y-3.5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Senha Atual (Antiga)</label>
+                    <input type="password" x-model="changePasswordCurrent" required placeholder="Digite sua senha atual"
+                           class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:border-repix-blue text-slate-900 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Nova Senha (Mín. 6 caracteres)</label>
+                    <input type="password" x-model="changePasswordNew" required minlength="6" placeholder="Nova senha"
+                           class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:border-repix-blue text-slate-900 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Confirmar Nova Senha</label>
+                    <input type="password" x-model="changePasswordConfirm" required minlength="6" placeholder="Repita a nova senha"
+                           class="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:border-repix-blue text-slate-900 dark:text-white">
+                </div>
+
+                <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-200 dark:border-slate-800">
+                    <button type="button" @click="closePasswordModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="submit" :disabled="changePasswordLoading" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-repix-blue hover:bg-repix-blueDark text-white transition cursor-pointer flex items-center gap-1.5">
+                        <span x-show="!changePasswordLoading">Salvar Nova Senha</span>
+                        <span x-show="changePasswordLoading">Atualizando...</span>
+                    </button>
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+
+    </body>
+</html>
