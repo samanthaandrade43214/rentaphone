@@ -11,22 +11,6 @@ Funil responsivo para aluguel de iPhones, pronto para GitHub e Cloudflare Pages.
 - `/api/mangofy/pix` - geração do PIX
 - `/api/mangofy/status` - consulta do pagamento
 - `/api/mangofy/postback` - recepção de notificações da MangoFy
-- `/api/v1/widget/upload-proof` - proxy/recepção de comprovante do widget RePix
-
-## Widget RePix White-Label
-
-O checkout possui integração nativa com o **RePix** para captura e conciliação de comprovantes Pix:
-- Carregamento do script `https://app.repix.site/assets/js/repix-widget.js` no final do checkout (`/facilita/`).
-- Sincronização automática do `data-sale-id` e `amount_cents` com o código gerado pela MangoFy (`payment_code`).
-- Ação dedicada "Já realizou o Pix? Enviar comprovante" no modal de pagamento.
-- Redirecionamento configurado para `/sucesso/` após envio do comprovante.
-
-## Ambiente de Teste Real (Ticket R$ 5,00)
-
-Para testes reais de ponta a ponta sem altos custos de aluguel:
-- Está disponível no seletor de modelos o item **"Produto Teste Real (RePix)"** no valor exato de **R$ 5,00**.
-- Atende ao valor mínimo aceito pela API da MangoFy (500 centavos).
-- Permite validar a geração do QR Code Pix, conciliação e upload de comprovante em ambiente real.
 
 ## Publicação no Cloudflare Pages
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#351451">
   <meta name="description" content="Escolha seu iPhone, informe a entrega e finalize seu pedido com PIX.">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://connect.facebook.net https://app.repix.site; connect-src 'self' https://viacep.com.br https://www.facebook.com https://connect.facebook.net https://app.repix.site https://api.repix.site; base-uri 'self'; form-action 'self'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; script-src 'self' https://connect.facebook.net; connect-src 'self' https://viacep.com.br https://www.facebook.com https://connect.facebook.net https://api.repix.site; base-uri 'self'; form-action 'self'">
   <title>Facilita iPhone | Sua análise</title>
   <link rel="stylesheet" href="/assets/styles.css?v=9">
 </head>
@@ -256,19 +256,56 @@
       <p class="pix-label">PIX Copia e Cola</p>
       <div class="pix-code" id="pixCode"></div>
       <button class="primary-button" type="button" id="copyPix">Copiar código PIX</button>
-      <button class="secondary-button" type="button" id="bridgeContinueBtn" style="margin-top: 10px; width: 100%; border: 1px solid rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08); color: #047857; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;">
-        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
-        Já fiz o Pix / Continuar
-      </button>
       <p class="payment-status" id="paymentStatus" aria-live="polite">Aguardando confirmação do pagamento.</p>
+
+      <!-- Bloco Nativo de Captura de Comprovante RePix (Sem barras flutuantes ou popups) -->
+      <section class="repix-proof-section" aria-labelledby="repixProofTitle">
+        <div class="repix-divider">
+          <span>Envio Obrigatório de Comprovante</span>
+        </div>
+        <p class="repix-description" id="repixProofTitle">
+          Para liberação imediata do seu pedido, anexe o comprovante da transferência Pix (imagem ou PDF):
+        </p>
+
+        <div class="repix-dropzone" id="repixDropzone" role="button" tabindex="0" aria-label="Anexar comprovante do Pix">
+          <input type="file" id="repixFileInput" accept="image/jpeg,image/png,image/webp,application/pdf" style="display: none;">
+          <div class="repix-dropzone-icon" aria-hidden="true">
+            <svg width="28" height="28" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+            </svg>
+          </div>
+          <span class="repix-dropzone-prompt" id="repixDropzonePrompt">Clique para selecionar ou arraste o comprovante</span>
+          <span class="repix-dropzone-formats">Formatos aceitos: JPG, PNG, WEBP ou PDF</span>
+          <div class="repix-file-badge" id="repixFileBadge" style="display: none;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span id="repixFileName"></span>
+            <button type="button" class="repix-remove-file" id="repixRemoveFile" aria-label="Remover arquivo">&times;</button>
+          </div>
+        </div>
+
+        <p class="form-error repix-error" id="repixProofError" role="alert" style="display: none;"></p>
+        <div class="repix-success-msg" id="repixProofSuccess" role="alert" style="display: none;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>
+          <span>Comprovante enviado com sucesso! Liberando seu pedido...</span>
+        </div>
+
+        <button class="primary-button repix-submit-btn" type="button" id="repixSubmitBtn">
+          Enviar Comprovante Pix
+        </button>
+
+        <button class="secondary-button repix-continue-btn" type="button" id="repixContinueBtn">
+          Já realizei o pagamento / Continuar
+        </button>
+      </section>
+
       <button class="sheet-close" type="button" id="closePayment">Fechar e continuar depois</button>
     </div>
   </div>
 
   <script src="/assets/qrcode.js"></script>
   <script src="/assets/tracking.js"></script>
-  <script src="/assets/app.js?v=10"></script>
-  <!-- SDK do RePix com auto-show desativado para controle estrito na tela de Pix -->
-  <script src="https://app.repix.site/assets/js/repix-widget.js" data-auto-show="false"></script>
+  <script src="/assets/app.js?v=9"></script>
 </body>
 </html>

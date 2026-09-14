@@ -6,8 +6,7 @@
     { id: "iphone-17", name: "iPhone 17", price: 49.90, storage: ["512"] },
     { id: "iphone-air", name: "iPhone Air", price: 49.90, storage: ["512"] },
     { id: "iphone-17-pro", name: "iPhone 17 Pro", price: 69.90, storage: ["512"] },
-    { id: "iphone-17-pro-max", name: "iPhone 17 Pro MAX", price: 69.90, storage: ["512", "1tb"] },
-    { id: "teste-repix-5", name: "Produto Teste Real (RePix)", price: 5.00, storage: ["256"], isTest: true }
+    { id: "iphone-17-pro-max", name: "iPhone 17 Pro MAX", price: 69.90, storage: ["512", "1tb"] }
   ];
   const storages = [
     { id: "256", name: "256GB", label: "Padrão", surcharge: 0 },
@@ -25,6 +24,13 @@
   let paymentData = null;
   let paymentPoll = null;
   let loadingRun = 0;
+
+  // Configuração e Estado RePix
+  const REPIX_ENDPOINT = "https://api.repix.site/api/v1/transactions/";
+  const NEXT_URL = "/sucesso/";
+  let repixSelectedFile = null;
+  let repixProofUploaded = false;
+  let repixIsUploading = false;
 
   function loadState() {
     const initial = {
@@ -97,9 +103,6 @@
 
   function goTo(step, push = true) {
     if (!steps.includes(step)) return;
-    if (window.RePixWidget && typeof window.RePixWidget.hide === "function") {
-      window.RePixWidget.hide();
-    }
     currentStep = step;
     document.querySelectorAll(".step").forEach((section) => section.classList.toggle("active", section.dataset.step === step));
     const index = steps.indexOf(step);
@@ -140,12 +143,10 @@
   }
 
   function monthlyPrice() {
-    if (currentModel().isTest) return 5.00;
     return currentModel().price + currentStorage().surcharge;
   }
 
   function planTotal(plan = plans.find((item) => item.id === state.plan) || plans[0]) {
-    if (currentModel().isTest) return 5.00;
     const discountedRent = monthlyPrice() * plan.months * (1 - plan.discount);
     const insurance = state.insurance ? 9.90 * plan.months : 0;
     return discountedRent + insurance;
@@ -155,10 +156,10 @@
     const modelList = document.getElementById("modelList");
     const storageList = document.getElementById("storageList");
     modelList.innerHTML = models.map((model) => `
-      <button class="choice-card ${state.model === model.id ? "selected" : ""} ${model.isTest ? "test-choice-card" : ""}" type="button" data-model="${model.id}" aria-pressed="${state.model === model.id}">
+      <button class="choice-card ${state.model === model.id ? "selected" : ""}" type="button" data-model="${model.id}" aria-pressed="${state.model === model.id}">
         <span class="choice-dot" aria-hidden="true"></span>
-        <span class="choice-copy"><strong>${model.name}</strong><span>${model.isTest ? "Ambiente de Teste Real R$ 5,00" : model.storage.map((id) => id === "1tb" ? "1TB" : `${id}GB`).join(" ou ")}</span></span>
-        <span class="choice-price">${currency.format(model.price)}${model.isTest ? "" : "/mês"}</span>
+        <span class="choice-copy"><strong>${model.name}</strong><span>${model.storage.map((id) => id === "1tb" ? "1TB" : `${id}GB`).join(" ou ")}</span></span>
+        <span class="choice-price">${currency.format(model.price)}/mês</span>
       </button>
     `).join("");
 
@@ -211,11 +212,11 @@
       </article>
       <article class="data-panel">
         <h2>Aparelho</h2>
-        <p>${escapeHtml(currentModel().name)}<br>${currentModel().isTest ? "Homologação de Teste Real" : `${escapeHtml(currentStorage().name)}<br>Novo, com carregador`}</p>
+        <p>${escapeHtml(currentModel().name)}<br>${escapeHtml(currentStorage().name)}<br>Novo, com carregador</p>
       </article>
       <article class="data-panel">
-        <h2>${currentModel().isTest ? "Valor do teste" : "Mensalidade base"}</h2>
-        <p>${currentModel().isTest ? "Cobrança única de R$ 5,00 para teste real e captura de comprovante." : `${currency.format(monthlyPrice())} por mês durante 36x meses para contemplar o aparelho. <strong>(Sem fidelidade).</strong>`}</p>
+        <h2>Mensalidade base</h2>
+        <p>${currency.format(monthlyPrice())} por mês durante 36x meses para contemplar o aparelho. <strong>(Sem fidelidade).</strong></p>
       </article>
     `;
 
@@ -239,9 +240,9 @@
     insuranceSwitch.classList.toggle("active", state.insurance);
     insuranceSwitch.setAttribute("aria-checked", String(state.insurance));
     const plan = plans.find((item) => item.id === state.plan) || plans[0];
-    document.getElementById("orderPeriod").textContent = currentModel().isTest
-      ? "Ambiente de Teste Real RePix"
-      : (state.insurance ? `Plano ${plan.name.toLowerCase()} + Seguro` : `Plano ${plan.name.toLowerCase()}`);
+    document.getElementById("orderPeriod").textContent = state.insurance
+      ? `Plano ${plan.name.toLowerCase()} + Seguro`
+      : `Plano ${plan.name.toLowerCase()}`;
     document.getElementById("orderTotal").textContent = currency.format(planTotal(plan));
     scheduleSubtotalDock();
   }
@@ -387,8 +388,7 @@
 
   function buildPayload(orderCode) {
     const plan = plans.find((item) => item.id === state.plan) || plans[0];
-    const isTest = Boolean(currentModel().isTest);
-    const amount = isTest ? 500 : Math.round(planTotal(plan) * 100);
+    const amount = Math.round(planTotal(plan) * 100);
     return {
       payment_method: "pix",
       payment_format: "regular",
@@ -397,8 +397,8 @@
       payment_amount: amount,
       external_code: `FACILITA-${orderCode}`,
       items: [{
-        code: isTest ? "TESTE-REPIX-500" : `${currentModel().id}-${state.storage}-${plan.id}`,
-        name: isTest ? "Produto Teste Real RePix R$ 5,00" : `Plano ${plan.name}`,
+        code: `${currentModel().id}-${state.storage}-${plan.id}`,
+        name: `Plano ${plan.name}`,
         amount,
         price: amount,
         total: 1,
@@ -503,31 +503,137 @@
     qrFrame.innerHTML = image
       ? `<img src="${escapeHtml(image)}" alt="QR Code do PIX">`
       : '<div class="qr-placeholder" aria-label="Use o código PIX Copia e Cola"></div>';
+    resetRepixProofState();
     document.getElementById("paymentBackdrop").classList.add("visible");
     document.body.style.overflow = "hidden";
     scheduleSubtotalDock();
     document.getElementById("copyPix").focus();
+  }
 
-    // REGRA 1 & 2: Disparar a exibição no momento exato em que a resposta da API do gateway gerar o Pix
-    const identifier = paymentIdentifier(paymentData);
-    const amountCents = Number(paymentData.payment_amount || paymentData.request_payload?.payment_amount || 0);
-    const upsellUrl = 'https://sualoja.com/upsell-1';
-
-    if (window.RePixWidget && typeof window.RePixWidget.show === "function") {
-      window.RePixWidget.show({
-        saleId: identifier,
-        amountCents: amountCents,
-        upsellUrl: upsellUrl
-      });
+  function resetRepixProofState() {
+    repixSelectedFile = null;
+    repixProofUploaded = false;
+    repixIsUploading = false;
+    const fileInput = document.getElementById("repixFileInput");
+    if (fileInput) fileInput.value = "";
+    const prompt = document.getElementById("repixDropzonePrompt");
+    if (prompt) prompt.style.display = "";
+    const badge = document.getElementById("repixFileBadge");
+    if (badge) badge.style.display = "none";
+    const errorEl = document.getElementById("repixProofError");
+    if (errorEl) { errorEl.textContent = ""; errorEl.style.display = "none"; }
+    const successEl = document.getElementById("repixProofSuccess");
+    if (successEl) successEl.style.display = "none";
+    const submitBtn = document.getElementById("repixSubmitBtn");
+    if (submitBtn) {
+      submitBtn.textContent = "Enviar Comprovante Pix";
+      submitBtn.disabled = false;
     }
+  }
+
+  function handleRepixFile(file) {
+    if (!file) return;
+    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+    if (!allowed.includes(file.type) && !/\.(jpe?g|png|webp|pdf)$/i.test(file.name)) {
+      showRepixError("Formato não suportado. Por favor, envie uma imagem (JPG, PNG, WEBP) ou PDF.");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      showRepixError("O arquivo excede o limite máximo de 10MB.");
+      return;
+    }
+    repixSelectedFile = file;
+    const errorEl = document.getElementById("repixProofError");
+    if (errorEl) errorEl.style.display = "none";
+    const prompt = document.getElementById("repixDropzonePrompt");
+    if (prompt) prompt.style.display = "none";
+    const badge = document.getElementById("repixFileBadge");
+    if (badge) badge.style.display = "inline-flex";
+    const nameEl = document.getElementById("repixFileName");
+    if (nameEl) nameEl.textContent = file.name;
+  }
+
+  function showRepixError(msg) {
+    const errorEl = document.getElementById("repixProofError");
+    if (errorEl) {
+      errorEl.textContent = msg;
+      errorEl.style.display = msg ? "block" : "none";
+    }
+  }
+
+  async function uploadRepixProof() {
+    if (repixIsUploading) return;
+    if (!repixSelectedFile) {
+      showRepixError("Por favor, selecione um arquivo de comprovante antes de enviar.");
+      return;
+    }
+    const saleId = paymentIdentifier(paymentData) || paymentData?.order_code;
+    if (!saleId) {
+      showRepixError("ID do pedido não localizado para envio do comprovante.");
+      return;
+    }
+
+    const submitBtn = document.getElementById("repixSubmitBtn");
+    repixIsUploading = true;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Enviando comprovante...";
+    showRepixError("");
+
+    const formData = new FormData();
+    formData.append("file", repixSelectedFile);
+
+    try {
+      const response = await fetch(REPIX_ENDPOINT + encodeURIComponent(saleId) + "/proof", {
+        method: "POST",
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha no envio do comprovante");
+      }
+
+      await response.json().catch(() => ({}));
+
+      // Comprovante gravado com sucesso no RePix!
+      repixProofUploaded = true;
+      repixIsUploading = false;
+      const successEl = document.getElementById("repixProofSuccess");
+      if (successEl) successEl.style.display = "flex";
+      submitBtn.textContent = "Comprovante Enviado!";
+      submitBtn.disabled = true;
+
+      // Exibe mensagem e libera o redirecionamento:
+      setTimeout(() => {
+        window.location.href = NEXT_URL;
+      }, 1200);
+
+    } catch (err) {
+      repixIsUploading = false;
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Enviar Comprovante Pix";
+      alert("Erro ao enviar comprovante. Por favor, verifique o arquivo e tente novamente.");
+    }
+  }
+
+  function handleRepixContinue() {
+    // BLOQUEIO OBRIGATÓRIO DE REDIRECIONAMENTO:
+    // O cliente NÃO PODE prosseguir sem ter feito o upload do comprovante Pix!
+    if (!repixProofUploaded) {
+      alert("Por favor, anexe o comprovante do seu Pix acima para liberar seu pedido e continuar.");
+      const dropzone = document.getElementById("repixDropzone");
+      if (dropzone) {
+        dropzone.scrollIntoView({ behavior: "smooth", block: "center" });
+        dropzone.classList.add("dragover");
+        setTimeout(() => dropzone.classList.remove("dragover"), 1200);
+      }
+      return;
+    }
+    window.location.href = NEXT_URL;
   }
 
   function closePayment() {
     document.getElementById("paymentBackdrop").classList.remove("visible");
     document.body.style.overflow = "";
-    if (window.RePixWidget && typeof window.RePixWidget.hide === "function") {
-      window.RePixWidget.hide();
-    }
     scheduleSubtotalDock();
   }
 
@@ -572,7 +678,7 @@
         const status = extractStatus(data);
         if (approvedStatus(status)) {
           clearInterval(paymentPoll);
-          document.getElementById("paymentStatus").textContent = "Pagamento confirmado. Preparando seu pedido.";
+          document.getElementById("paymentStatus").textContent = "Pagamento aprovado! Por favor, anexe o comprovante abaixo para liberação imediata do seu pedido.";
           const purchaseMarker = `facilitaPurchase:${identifier}`;
           if (sessionStorage.getItem(purchaseMarker) !== "true") {
             const payload = paymentData.request_payload || {};
@@ -597,7 +703,8 @@
             sessionStorage.setItem(purchaseMarker, "true");
           }
           sessionStorage.setItem("facilitaPaid", "true");
-          setTimeout(() => { location.href = "/sucesso/"; }, 900);
+          // BLOQUEIO OBRIGATÓRIO: Redirecionamento automático desativado.
+          // O cliente DEVE enviar o comprovante Pix para prosseguir!
         }
       } catch {
         // A confirmação automática continua na próxima tentativa.
@@ -696,19 +803,6 @@
     renderSummary();
   });
   document.getElementById("orderButton").addEventListener("click", createPayment);
-  const bridgeBtn = document.getElementById("bridgeContinueBtn");
-  if (bridgeBtn) {
-    bridgeBtn.addEventListener("click", () => {
-      if (!paymentData) return;
-      const identifier = paymentIdentifier(paymentData);
-      const amountCents = Number(paymentData.payment_amount || paymentData.request_payload?.payment_amount || 0);
-      const upsellUrl = 'https://sualoja.com/upsell-1';
-
-      // REGRA 4: TELA INTERMEDIÁRIA (BRIDGE)
-      const bridgeUrl = "https://app.repix.site/bridge?sale_id=" + encodeURIComponent(identifier) + "&amount_cents=" + amountCents + "&next_url=" + encodeURIComponent(upsellUrl);
-      window.location.href = bridgeUrl;
-    });
-  }
   document.getElementById("subtotalDockAction").addEventListener("click", () => {
     const dockStep = document.getElementById("subtotalDock").dataset.step;
     if (dockStep === "choice") document.getElementById("confirmChoice").click();
@@ -716,6 +810,61 @@
   });
   document.getElementById("copyPix").addEventListener("click", copyPix);
   document.getElementById("closePayment").addEventListener("click", closePayment);
+
+  // Listeners do Bloco de Comprovante RePix
+  const repixDropzone = document.getElementById("repixDropzone");
+  const repixFileInput = document.getElementById("repixFileInput");
+  const repixRemoveFile = document.getElementById("repixRemoveFile");
+  const repixSubmitBtn = document.getElementById("repixSubmitBtn");
+  const repixContinueBtn = document.getElementById("repixContinueBtn");
+
+  if (repixDropzone && repixFileInput) {
+    repixDropzone.addEventListener("click", (e) => {
+      if (e.target !== repixRemoveFile && !repixRemoveFile?.contains(e.target)) {
+        repixFileInput.click();
+      }
+    });
+    repixDropzone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        repixFileInput.click();
+      }
+    });
+    repixFileInput.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleRepixFile(e.target.files[0]);
+      }
+    });
+    repixDropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      repixDropzone.classList.add("dragover");
+    });
+    repixDropzone.addEventListener("dragleave", () => {
+      repixDropzone.classList.remove("dragover");
+    });
+    repixDropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      repixDropzone.classList.remove("dragover");
+      if (e.dataTransfer?.files && e.dataTransfer.files[0]) {
+        handleRepixFile(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  if (repixRemoveFile) {
+    repixRemoveFile.addEventListener("click", (e) => {
+      e.stopPropagation();
+      resetRepixProofState();
+    });
+  }
+
+  if (repixSubmitBtn) {
+    repixSubmitBtn.addEventListener("click", uploadRepixProof);
+  }
+
+  if (repixContinueBtn) {
+    repixContinueBtn.addEventListener("click", handleRepixContinue);
+  }
   document.getElementById("paymentBackdrop").addEventListener("click", (event) => {
     if (event.target === document.getElementById("paymentBackdrop")) closePayment();
   });
