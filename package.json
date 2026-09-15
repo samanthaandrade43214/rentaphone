@@ -4,7 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "check": "node --check assets/app.js && node --check assets/pressel.js && node --check assets/qrcode.js && node --check assets/success.js && node --check assets/tracking.js && node --check assets/terms.js && node --check functions/api/mangofy/billet.js && node --check functions/api/mangofy/pix.js && node --check functions/api/mangofy/status.js && node --check functions/api/mangofy/postback.js && node --check functions/api/meta/events.js",
-    "dev": "node preview_server.js"
+    "check": "node --check assets/app.js && node --check assets/pressel.js && node --check assets/qrcode.js && node --check assets/success.js && node --check assets/tracking.js && node --check assets/terms.js && node --check functions/api/mangofy/billet.js && node --check functions/api/mangofy/pix.js && node --check functions/api/mangofy/status.js && node --check functions/api/mangofy/postback.js && node --check functions/api/meta/events.js"
   }
 }

