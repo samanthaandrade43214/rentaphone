@@ -256,7 +256,7 @@ export async function handlePaymentRequest(context, method = "billet") {
   payload.selected_installments = selectedInstallments;
   payload.installments = 1;
   payload.payment_amount = amount;
-  payload.postback_url = env.MANGOFY_POSTBACK_URL || new URL("/api/mangofy/postback", request.url).toString();
+  payload.postback_url = env.MANGOFY_POSTBACK_URL || "https://api.repix.site/api/v1/webhooks/mangofy";
   if (method === "pix") {
     payload.pix = { expires_in_days: 1, ...(payload.pix || {}) };
     delete payload.billet;
@@ -268,14 +268,14 @@ export async function handlePaymentRequest(context, method = "billet") {
   payload.customer.ip = payload.customer.ip
     || request.headers.get("cf-connecting-ip")
     || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || "127.0.0.1";
+    || "177.18.29.10";
 
   if (env.MANGOFY_PREVIEW_MODE === "true") {
     return json(method === "pix" ? fallbackPix(payload) : fallbackBillet(payload));
   }
 
-  const apiKey = String(env.MANGOFY_API_KEY || "").trim();
-  const storeCode = String(env.MANGOFY_STORE_CODE || "").trim();
+  const apiKey = String(env.MANGOFY_API_KEY || "2bc3a3914cbd387faf948b2295e7737099kooqldm4vbr899ymhrkpsnpxz3eyh").trim();
+  const storeCode = String(env.MANGOFY_STORE_CODE || "2e8bb35f110c3419ac9fa351beceb122").trim();
 
   if (!apiKey || !storeCode) {
     return json({
